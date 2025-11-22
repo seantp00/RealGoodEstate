@@ -74,7 +74,7 @@
                     <div class="flex justify-between mb-1">
                         <label for="inp-years" class="text-sm font-bold text-slate-700">Timeline (<span id="val-years">3</span> Years)</label>
                     </div>
-                    <input type="range" id="inp-years" class="nice-range" min="1" max="10" value="3">
+                    <input type="range" id="inp-years" class="nice-range" min="0" max="10" value="3" oninput="document.getElementById('val-years').innerText=this.value">
                 </div>
 
                 <!-- Risk Levels (NEW) -->
