@@ -72,7 +72,7 @@
             "sortBy": "asc",
             "sortKey": "buyingPrice",
             "from": 1,
-            "size": 10000,
+            "size": 4000,
             "geoSearches": { "geoSearchQuery": app.data.location, "geoSearchType": "city" }
         };
         try {
@@ -85,10 +85,7 @@
             if (!res.ok) throw new Error('API Error');
             const data = await res.json();
             const allListings = data.results || [];
-            for(let i=0; i<allListings.length; i++){
-                console.log('[buy.js] Listing', i, ':', allListings[i].type);
-            }
-            const matches = allListings.filter(l => l.buyingPrice <= effectiveBudget && l.buyingPrice >= 0);
+            const matches = allListings.filter(l =>  l.buyingPrice >= 0);
             console.log('[buy.js] Matches found (pre-filter):', matches.length);
             const filters = getActiveFilters();
             const filtered = applyFilters(matches, filters);
@@ -179,8 +176,15 @@
             sortKey: getVal('filter-sort-key') || 'buyingPrice',
             sortOrder: getVal('filter-sort-order') || 'asc'
         };
-
+        console.log('MAX PRICE: ' + filters.maxPrice);
         return filters;
+    }
+
+    // Get recommendation score for sorting
+    function getRecommendationScore(item) {
+        if (item._recommendation !== undefined) return item._recommendation;
+        item._recommendation = calculateRecommendation(item);
+        return item._recommendation;
     }
 
     function parseNumber(v) {
@@ -193,6 +197,53 @@
         if (!v) return null;
         const d = new Date(v);
         return isNaN(d.getTime()) ? null : d;
+    }
+
+    // Calculate recommendation score (0-100) based on similarity to desired property
+    function calculateRecommendation(item) {
+        let score = 0;
+        let factors = 0;
+
+        // Get desired property inputs from app.data
+        const desiredSqm = app.data.sqm;
+        const desiredRooms = app.data.rooms;
+        const desiredYear = app.data.yearBuilt;
+        const desiredPrice = app.data.target;
+
+        // Factor 1: Square meters similarity (weight: 25%)
+        if (desiredSqm && item.squareMeter) {
+            const sqmDiff = Math.abs(item.squareMeter - desiredSqm) / desiredSqm;
+            score += Math.max(0, 25 - (sqmDiff * 25));
+            factors++;
+        }
+
+        // Factor 2: Rooms similarity (weight: 20%)
+        if (desiredRooms && item.rooms) {
+            const roomsDiff = Math.abs(item.rooms - desiredRooms);
+            score += Math.max(0, 20 - (roomsDiff * 5));
+            factors++;
+        }
+
+        // Factor 3: Year built similarity (weight: 15%)
+        if (desiredYear) {
+            const yearField = getFirstField(item, ['constructionYear', 'yearBuilt', 'builtYear']);
+            if (yearField) {
+                const yearDiff = Math.abs(yearField - desiredYear);
+                score += Math.max(0, 15 - (yearDiff / 10));
+                factors++;
+            }
+        }
+
+        // Factor 4: Price fit to budget (weight: 40%)
+        if (desiredPrice && item.buyingPrice) {
+            const priceDiff = Math.abs(item.buyingPrice - desiredPrice) / desiredPrice;
+            score += Math.max(0, 40 - (priceDiff * 40));
+            factors++;
+        }
+
+        // Normalize if not all factors available
+        if (factors === 0) return 50; // Default neutral score
+        return Math.round(Math.min(100, score));
     }
 
     function getFirstField(item, keys) {
@@ -248,6 +299,13 @@
         const key = filters.sortKey || 'buyingPrice';
         const order = (filters.sortOrder || 'asc').toLowerCase();
         out.sort((a, b) => {
+            // Special handling for recommendation sorting
+            if (key === 'recommendation') {
+                const aScore = getRecommendationScore(a);
+                const bScore = getRecommendationScore(b);
+                return order === 'asc' ? aScore - bScore : bScore - aScore;
+            }
+
             const aVal = getFirstField(a, [key, key === 'pricePerSqm' ? 'pricePerSqm' : key]);
             const bVal = getFirstField(b, [key, key === 'pricePerSqm' ? 'pricePerSqm' : key]);
 
@@ -310,15 +368,15 @@
         }
 
         items.forEach((item, idx) => {
+            // Calculate recommendation score
+            const recommendationScore = calculateRecommendation(item);
+            
             let img = 'https://placehold.co/600x400/E6F2FA/005EA8?text=Listing';
             if (item.images && item.images.length > 0) {
-                console.log('[buy.js] Item has', item.images.length, 'images:', item.images);
                 for (let i = 0; i < item.images.length; i++) {
-                    console.log('[buy.js] Checking image', i, ':', item.images[i]);
                     try{
                         if (item.images[i] && item.images[i].originalUrl) {
                             img = item.images[i].originalUrl;
-                            console.log('[buy.js] Using image:', img);
                             break;
                         }
                     }catch(e){
@@ -377,6 +435,23 @@
             badge.appendChild(priceSpan);
 
             // Add website link indicator (only visible on hover)
+            // Recommendation badge (always visible)
+            const recBadge = document.createElement('div');
+            recBadge.className = 'absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold shadow-md';
+            if (recommendationScore >= 80) {
+                recBadge.className += ' bg-green-500 text-white';
+                recBadge.innerHTML = '<i class="fa-solid fa-star mr-1"></i>' + recommendationScore + '%';
+            } else if (recommendationScore >= 60) {
+                recBadge.className += ' bg-blue-500 text-white';
+                recBadge.innerHTML = recommendationScore + '%';
+            } else if (recommendationScore >= 40) {
+                recBadge.className += ' bg-yellow-500 text-white';
+                recBadge.innerHTML = recommendationScore + '%';
+            } else {
+                recBadge.className += ' bg-gray-400 text-white';
+                recBadge.innerHTML = recommendationScore + '%';
+            }
+
             const linkIndicator = document.createElement('div');
             linkIndicator.className = 'absolute top-2 right-2 px-2 py-1 rounded text-xs font-medium pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200';
             if (platforms.length > 0) {
@@ -389,6 +464,7 @@
 
             top.appendChild(imgEl);
             top.appendChild(badge);
+            top.appendChild(recBadge);
             top.appendChild(linkIndicator);
 
             const body = document.createElement('div');
