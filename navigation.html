@@ -1,0 +1,15 @@
+<nav class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex items-center cursor-pointer" onclick="app.nav('dream')">
+                <div class="w-8 h-8 bg-interhyp-blue rounded flex items-center justify-center mr-3 text-white font-bold text-lg">H</div>
+                <span class="font-bold text-xl tracking-tight text-interhyp-blue">RealGoodEstate</span>
+            </div>
+            <div class="hidden md:flex items-center space-x-8">
+                <button onclick="app.nav('dream')" id="nav-dream" class="nav-active px-1 pt-1 text-sm font-semibold h-16 flex items-center">1. Dream</button>
+                <button onclick="app.nav('plan')" id="nav-plan" class="nav-inactive px-1 pt-1 text-sm font-semibold h-16 flex items-center hover:text-interhyp-blue transition-colors">2. Plan & Analyze</button>
+                <button onclick="app.nav('buy')" id="nav-buy" class="nav-inactive px-1 pt-1 text-sm font-semibold h-16 flex items-center hover:text-interhyp-blue transition-colors">3. Discover Market</button>
+            </div>
+        </div>
+    </div>
+</nav>
