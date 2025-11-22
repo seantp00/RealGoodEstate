@@ -1,8 +1,45 @@
 (function(){
     const app = window.app;
 
+    // Calculate required monthly savings to reach down payment goal
+    app.calculateRequiredSavings = function(downPaymentGoal, currentEquity, years, monthlyRate) {
+        const totalMonths = years * 12;
+
+        // For cash (non-invested): simple calculation
+        // Final = currentEquity + (monthlySavings * totalMonths)
+        // monthlySavings = (downPaymentGoal - currentEquity) / totalMonths
+        const requiredCash = totalMonths > 0
+            ? Math.max(0, (downPaymentGoal - currentEquity) / totalMonths)
+            : 0;
+
+        // For invested: compound interest formula
+        // Final = currentEquity * (1 + r)^n + monthlySavings * [((1 + r)^n - 1) / r]
+        // Solving for monthlySavings:
+        // monthlySavings = (downPaymentGoal - currentEquity * (1 + r)^n) / [((1 + r)^n - 1) / r]
+        let requiredInvested = 0;
+        if (totalMonths > 0 && monthlyRate > 0) {
+            const raisedRate = Math.pow(1 + monthlyRate, totalMonths);
+            const futureValueOfCurrentEquity = currentEquity * raisedRate;
+            const annuityFactor = (raisedRate - 1) / monthlyRate;
+
+            if (annuityFactor > 0) {
+                requiredInvested = Math.max(0, (downPaymentGoal - futureValueOfCurrentEquity) / annuityFactor);
+            } else {
+                requiredInvested = requiredCash; // fallback to cash calculation
+            }
+        } else if (totalMonths > 0) {
+            // If no interest rate, same as cash
+            requiredInvested = requiredCash;
+        }
+
+        return {
+            requiredCash: requiredCash,
+            requiredInvested: requiredInvested
+        };
+    };
+
     // Update the mid "Key Figures" panel values (purely visual)
-    app.updateKeyFigures = function(finalProjectedEquity){
+    app.updateKeyFigures = function(finalProjectedEquity, monthlyRate){
         try {
             const fmtNoSymbol = (v) => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(Math.round(Number(v)||0));
 
@@ -10,6 +47,8 @@
             const elTargetPrice = document.getElementById('key-target-price');
             const elProjectedEq = document.getElementById('key-projected-equity');
             const elDownPayment = document.getElementById('key-down-payment');
+            const elRequiredInvested = document.getElementById('key-required-invested');
+            const elRequiredCash = document.getElementById('key-required-cash');
 
             // Inputs sourced from existing app.data and chart math
             const buyingPower = app?.data?.currPower ?? 0;
@@ -23,6 +62,16 @@
             if (elTargetPrice) elTargetPrice.textContent = fmtNoSymbol(targetPrice);
             if (elProjectedEq) elProjectedEq.textContent = fmtNoSymbol(projectedEquity);
             if (elDownPayment) elDownPayment.textContent = fmtNoSymbol(downPay);
+
+            // Calculate and display required monthly savings rates
+            const currentEquity = app?.data?.equity ?? 0;
+            const years = app?.data?.years ?? 1;
+            const rate = monthlyRate ?? 0;
+
+            const requiredSavings = app.calculateRequiredSavings(downPay, currentEquity, years, rate);
+
+            if (elRequiredInvested) elRequiredInvested.textContent = fmtNoSymbol(requiredSavings.requiredInvested);
+            if (elRequiredCash) elRequiredCash.textContent = fmtNoSymbol(requiredSavings.requiredCash);
         } catch (e) {
             // visual only; fail silently
         }
@@ -53,7 +102,30 @@
         const downpaymentGoal = app.data.target * 0.20; // 20% downpayment ->
         const targetLine = new Array(app.data.years + 1).fill(downpaymentGoal);
 
-        const allValues = dataCompound.concat(dataCash, targetLine).map(v => Number(v) || 0);
+        // Calculate required savings rate projections
+        const requiredSavings = app.calculateRequiredSavings(downpaymentGoal, app.data.equity, app.data.years, monthlyRate);
+
+        // Project what happens with required savings rate (invested)
+        const dataRequiredInvested = [app.data.equity];
+        let tempRequiredInvested = app.data.equity;
+        for(let y=1; y<=app.data.years; y++) {
+            for(let m=0; m<12; m++) {
+                tempRequiredInvested = (tempRequiredInvested * (1 + monthlyRate)) + requiredSavings.requiredInvested;
+            }
+            dataRequiredInvested.push(tempRequiredInvested);
+        }
+
+        // Project what happens with required savings rate (cash)
+        const dataRequiredCash = [app.data.equity];
+        let tempRequiredCash = app.data.equity;
+        for(let y=1; y<=app.data.years; y++) {
+            for(let m=0; m<12; m++) {
+                tempRequiredCash += requiredSavings.requiredCash;
+            }
+            dataRequiredCash.push(tempRequiredCash);
+        }
+
+        const allValues = dataCompound.concat(dataCash, targetLine, dataRequiredInvested, dataRequiredCash).map(v => Number(v) || 0);
         const maxVal = Math.max(...allValues, 0);
         const minVal = Math.min(...allValues, maxVal * 0.95);
         const suggestedMax = Math.ceil(maxVal * 1.04); // 8% headroom
@@ -66,7 +138,7 @@
                 labels: yearsArr,
                 datasets: [
                     {
-                        label: `Strategy (${app.data.rate}%)`,
+                        label: `Current Rate Invested (${app.data.rate}%)`,
                         data: dataCompound,
                         borderColor: '#005EA8',
                         backgroundColor: 'rgba(0, 94, 168, 0.1)',
@@ -74,18 +146,40 @@
                         tension: 0.4
                     },
                     {
-                        label: 'Cash Savings',
+                        label: 'Current Rate Cash',
                         data: dataCash,
                         borderColor: '#94A3B8',
                         borderDash: [5, 5],
                         fill: false
                     },
                     {
-                        label: `20% Downpayment - (${app.fmt(downpaymentGoal)})`,
-                        data: targetLine,
+                        label: `Required Rate Invested (€${app.fmt(requiredSavings.requiredInvested)}/mo)`,
+                        data: dataRequiredInvested,
+                        borderColor: '#16A34A',
+                        borderWidth: 2,
+                        borderDash: [8, 4],
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#16A34A'
+                    },
+                    {
+                        label: `Required Rate Cash (€${app.fmt(requiredSavings.requiredCash)}/mo)`,
+                        data: dataRequiredCash,
                         borderColor: '#F59E0B',
+                        borderWidth: 2,
+                        borderDash: [8, 4],
+                        fill: false,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#F59E0B'
+                    },
+                    {
+                        label: `20% Downpayment Goal (${app.fmt(downpaymentGoal)})`,
+                        data: targetLine,
+                        borderColor: '#DC2626',
                         borderDash: [2, 2],
-                        pointRadius: 0
+                        pointRadius: 0,
+                        borderWidth: 2
                     }
                 ]
             },
@@ -109,7 +203,7 @@
 
         // Update mid panel to reflect current numbers (projected equity aligns with chart's final value)
         const finalProjected = dataCompound[dataCompound.length - 1] ?? app.data.equity;
-        app.updateKeyFigures(finalProjected);
+        app.updateKeyFigures(finalProjected, monthlyRate);
 
         // Generate initial AI advice after chart is ready
         if (app.generateFirstAIText) {
