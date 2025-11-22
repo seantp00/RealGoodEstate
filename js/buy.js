@@ -9,7 +9,16 @@
         const locEl = document.getElementById('api-loc');
         const budEl = document.getElementById('api-budget');
         if (locEl) locEl.innerText = app.data.location;
-        if (budEl) budEl.innerText = app.fmt(app.data.currPower);
+        // Determine effective budget (respect one-time override if requested)
+        const effectiveBudget = (app.data.useBudgetOverrideOnce && typeof app.data.buyBudgetOverride === 'number' && app.data.buyBudgetOverride > 0)
+            ? app.data.buyBudgetOverride
+            : app.data.currPower;
+        // Immediately clear one-time override after capturing to avoid races with rapid navigation
+        if (app.data.useBudgetOverrideOnce) {
+            app.data.useBudgetOverrideOnce = false;
+            app.data.buyBudgetOverride = null;
+        }
+        if (budEl) budEl.innerText = app.fmt(effectiveBudget);
 
         grid.innerHTML = '<div class="col-span-full h-64 flex flex-col items-center justify-center text-slate-400"><div class="loader mb-4"></div><p>Scanning Market via ThinkImmo...</p></div>';
         msg.classList.add('hidden');
@@ -33,13 +42,13 @@
             if (!res.ok) throw new Error('API Error');
             const data = await res.json();
             const allListings = data.results || [];
-            const matches = allListings.filter(l => l.buyingPrice <= app.data.currPower && l.buyingPrice >= 0);
+            const matches = allListings.filter(l => l.buyingPrice <= effectiveBudget && l.buyingPrice >= 0);
             console.log('[buy.js] Matches found (pre-filter):', matches.length);
             // Read UI filters and apply them
             const filters = getActiveFilters();
             const filtered = applyFilters(matches, filters);
             console.log('[buy.js] Matches after UI filters:', filtered.length, filters);
-            app.renderListings(filtered);
+            app.renderListings(filtered, effectiveBudget);
         } catch (e) {
             console.error('[buy.js] Error:', e);
             grid.innerHTML = '';
@@ -257,14 +266,15 @@
         if (parts.length === 0) s.innerText = 'No filters selected'; else s.innerText = parts.join(' · ');
     }
 
-    app.renderListings = function(items){
+    app.renderListings = function(items, effectiveBudget){
         const grid = document.getElementById('listings-grid');
         const msg = document.getElementById('listings-msg');
         if (!grid || !msg) return;
 
         grid.innerHTML = '';
         if(!items || items.length === 0) {
-            msg.innerHTML = `No properties found under <b>${app.fmt(app.data.currPower)}</b> in ${app.data.location}.`;
+            const bud = (typeof effectiveBudget === 'number' && effectiveBudget > 0) ? effectiveBudget : app.data.currPower;
+            msg.innerHTML = `No properties found under <b>${app.fmt(bud)}</b> in ${app.data.location}.`;
             msg.classList.remove('hidden');
             return;
         }
