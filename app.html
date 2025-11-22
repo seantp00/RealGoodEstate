@@ -35,54 +35,8 @@
         </div>
     </footer>
 
-    <script>
-        function injectHTMLWithScripts(container, html) {
-            const tpl = document.createElement('template');
-            tpl.innerHTML = html;
-            // Move child nodes (including non-script) first
-            const scripts = [];
-            Array.from(tpl.content.childNodes).forEach(node => {
-                if (node.tagName === 'SCRIPT') {
-                    scripts.push(node);
-                } else {
-                    container.appendChild(node);
-                }
-            });
-            // Execute scripts in order
-            for (const oldScript of scripts) {
-                const s = document.createElement('script');
-                // Copy attributes
-                Array.from(oldScript.attributes).forEach(attr => s.setAttribute(attr.name, attr.value));
-                s.textContent = oldScript.textContent;
-                container.appendChild(s);
-            }
-        }
-
-        async function loadPartials() {
-            const parts = [
-                { sel: '#nav-container', file: 'views/navigation.html' },
-                { sel: '#dream-container', file: 'views/dream.html' },
-                { sel: '#plan-container', file: 'views/plan.html' },
-                { sel: '#buy-container', file: 'views/buy.html' }
-            ];
-            for (const p of parts) {
-                try {
-                    const res = await fetch(p.file);
-                    const html = await res.text();
-                    const el = document.querySelector(p.sel);
-                    if (el) {
-                        el.innerHTML = '';
-                        injectHTMLWithScripts(el, html);
-                    }
-                } catch (e) {
-                    console.error('Failed to load', p.file, e);
-                }
-            }
-            if (window.app && typeof app.init === 'function') app.init();
-        }
-        document.addEventListener('DOMContentLoaded', loadPartials);
-    </script>
     <!-- Modular JS files - each view has its own logic -->
+    <script src="js/loader.js"></script>
     <script src="js/core.js"></script>
     <script src="js/navigation.js"></script>
     <script src="js/dream.js"></script>
