@@ -38,10 +38,54 @@
         };
     };
 
+    // Calculate time in years to reach a goal based on current savings
+    app.calculateTimeToGoal = function(downPaymentGoal, currentEquity, currentMonthlySaving, monthlyRate) {
+        const needed = downPaymentGoal - currentEquity;
+        if (needed <= 0) {
+            return { timeToGoalCash: 0, timeToGoalInvested: 0 };
+        }
+
+        // --- Cash Calculation ---
+        let timeToGoalCash = Infinity;
+        if (currentMonthlySaving > 0) {
+            const monthsCash = Math.ceil(needed / currentMonthlySaving);
+            timeToGoalCash = monthsCash / 12;
+        }
+
+        // --- Invested Calculation (Iterative) ---
+        let timeToGoalInvested = Infinity;
+        // Goal can be reached if savings are positive, or if current equity grows on its own
+        if (currentMonthlySaving > 0 || (currentEquity > 0 && monthlyRate > 0)) {
+            let investedEquity = currentEquity;
+            let monthsInvested = 0;
+            const maxMonths = 50 * 12; // 50 year limit to prevent infinite loops
+
+            while (investedEquity < downPaymentGoal && monthsInvested < maxMonths) {
+                investedEquity = (investedEquity * (1 + monthlyRate)) + currentMonthlySaving;
+                monthsInvested++;
+            }
+
+            if (monthsInvested < maxMonths) {
+                timeToGoalInvested = monthsInvested / 12;
+            }
+        }
+
+        return {
+            timeToGoalCash: timeToGoalCash,
+            timeToGoalInvested: timeToGoalInvested
+        };
+    };
+
+
     // Update the mid "Key Figures" panel values (purely visual)
     app.updateKeyFigures = function(finalProjectedEquity, monthlyRate){
         try {
             const fmtNoSymbol = (v) => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(Math.round(Number(v)||0));
+            const fmtYears = (y) => {
+                if (!isFinite(y)) return '∞';
+                if (y < 0) return '0.0';
+                return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(y);
+            };
 
             const elBuyingPower = document.getElementById('key-buying-power');
             const elTargetPrice = document.getElementById('key-target-price');
@@ -49,6 +93,8 @@
             const elDownPayment = document.getElementById('key-down-payment');
             const elRequiredInvested = document.getElementById('key-required-invested');
             const elRequiredCash = document.getElementById('key-required-cash');
+            const elTimeToGoalInvested = document.getElementById('key-time-invested');
+            const elTimeToGoalCash = document.getElementById('key-time-cash');
 
             // Inputs sourced from existing app.data and chart math
             const buyingPower = app?.data?.currPower ?? 0;
@@ -72,6 +118,14 @@
 
             if (elRequiredInvested) elRequiredInvested.textContent = fmtNoSymbol(requiredSavings.requiredInvested);
             if (elRequiredCash) elRequiredCash.textContent = fmtNoSymbol(requiredSavings.requiredCash);
+
+            // Calculate and display time to goal based on CURRENT savings
+            const currentSavings = app?.data?.savings ?? 0;
+            const timeToGoal = app.calculateTimeToGoal(downPay, currentEquity, currentSavings, rate);
+
+            if (elTimeToGoalInvested) elTimeToGoalInvested.textContent = fmtYears(timeToGoal.timeToGoalInvested);
+            if (elTimeToGoalCash) elTimeToGoalCash.textContent = fmtYears(timeToGoal.timeToGoalCash);
+
         } catch (e) {
             // visual only; fail silently
         }

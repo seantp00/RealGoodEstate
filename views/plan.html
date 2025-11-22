@@ -42,34 +42,41 @@
     </div>
 
     <!-- Key Figures -->
-    <div class="glass-panel p-6 rounded-xl space-y-4">
-        <div class="flex justify-between items-center">
+    <div class="glass-panel p-6 rounded-xl">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <!-- Row 1 -->
             <div>
                 <p class="text-xs text-slate-500 uppercase tracking-wider">Current Buying Power</p>
                 <p class="text-2xl font-bold text-slate-800 mt-1">€<span id="key-buying-power">0</span></p>
             </div>
-            <div class="text-right">
-                <p class="text-xs text-slate-500 uppercase tracking-wider">Target Price</p>
-                <p class="text-2xl font-bold text-slate-800 mt-1">€<span id="key-target-price">0</span></p>
-            </div>
-        </div>
-        <div class="flex justify-between items-center">
-            <div>
+            <div class="lg:text-center">
                 <p class="text-xs text-slate-500 uppercase tracking-wider">Projected Equity</p>
                 <p class="text-2xl font-bold text-interhyp-blue mt-1">€<span id="key-projected-equity">0</span></p>
             </div>
-            <div class="text-right">
-                <p class="text-xs text-slate-500 uppercase tracking-wider">Down Payment</p>
-                <p class="text-2xl font-bold text-interhyp-blue mt-1">€<span id="key-down-payment">0</span></p>
+            <div class="lg:text-right">
+                <p class="text-xs text-slate-500 uppercase tracking-wider">Time to Goal (curr. rate, invested)</p>
+                <p class="text-2xl font-bold text-interhyp-accent mt-1"><span id="key-time-invested">0</span> years</p>
             </div>
-        </div>
-        <div class="flex justify-between items-center">
-            <div>
-                <p class="text-xs text-slate-500 uppercase tracking-wider">Required Savings Rate (If Invested)</p>
+            <div class="lg:text-center">
+                <p class="text-xs text-slate-500 uppercase tracking-wider">Required Savings Rate (Invested)</p>
                 <p class="text-2xl font-bold text-green-600 mt-1">€<span id="key-required-invested">0</span>/mo</p>
             </div>
-            <div class="text-right">
-                <p class="text-xs text-slate-500 uppercase tracking-wider">Required Savings Rate (Cash Only)</p>
+
+            <!-- Row 2 -->
+            <div>
+                <p class="text-xs text-slate-500 uppercase tracking-wider">Target Price</p>
+                <p class="text-2xl font-bold text-slate-800 mt-1">€<span id="key-target-price">0</span></p>
+            </div>
+            <div class="lg:text-center">
+                <p class="text-xs text-slate-500 uppercase tracking-wider">Required Down Payment</p>
+                <p class="text-2xl font-bold text-interhyp-blue mt-1">€<span id="key-down-payment">0</span></p>
+            </div>
+            <div class="lg:text-right">
+                <p class="text-xs text-slate-500 uppercase tracking-wider">Time to Goal (curr. rate, Cash)</p>
+                <p class="text-2xl font-bold text-interhyp-accent mt-1"><span id="key-time-cash">0</span> years</p>
+            </div>
+            <div class="lg:text-center">
+                <p class="text-xs text-slate-500 uppercase tracking-wider">Required Savings Rate (Cash)</p>
                 <p class="text-2xl font-bold text-amber-600 mt-1">€<span id="key-required-cash">0</span>/mo</p>
             </div>
         </div>
