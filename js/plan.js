@@ -29,7 +29,7 @@
         const allValues = dataCompound.concat(dataCash, targetLine).map(v => Number(v) || 0);
         const maxVal = Math.max(...allValues, 0);
         const minVal = Math.min(...allValues, maxVal * 0.95);
-        const suggestedMax = Math.ceil(maxVal * 1.08); // 8% headroom
+        const suggestedMax = Math.ceil(maxVal * 1.04); // 8% headroom
         const suggestedMin = Math.floor(minVal * 0.92);
 
 
