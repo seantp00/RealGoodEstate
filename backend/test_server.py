@@ -88,6 +88,72 @@ def test_multiple_scenarios():
 
     return True
 
+def test_property_price_prediction():
+    """Test property price prediction endpoint"""
+    print("\n[TEST 4] Property Price Prediction...")
+
+    test_properties = [
+        {
+            "name": "City Apartment",
+            "sqm": 80,
+            "rooms": 2,
+            "bathrooms": 1,
+            "location": "city",
+            "condition": "good",
+            "yearBuilt": 2015
+        },
+        {
+            "name": "Family House",
+            "sqm": 120,
+            "rooms": 4,
+            "bathrooms": 2,
+            "location": "city",
+            "condition": "good",
+            "yearBuilt": 2010
+        },
+        {
+            "name": "Luxury Villa",
+            "sqm": 200,
+            "rooms": 6,
+            "bathrooms": 3,
+            "location": "premium",
+            "condition": "new",
+            "yearBuilt": 2022
+        },
+        {
+            "name": "Rural Cottage",
+            "sqm": 100,
+            "rooms": 3,
+            "bathrooms": 1,
+            "location": "rural",
+            "condition": "renovation",
+            "yearBuilt": 1980
+        }
+    ]
+
+    print(f"\n{'Property Type':<20} {'Size':<10} {'Location':<12} {'Predicted Price':<20}")
+    print("-" * 70)
+
+    for prop in test_properties:
+        try:
+            response = requests.post(
+                f"{BASE_URL}/api/predict-property-price",
+                json=prop,
+                headers={"Content-Type": "application/json"}
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                price = result['predictedPrice']
+                print(f"{prop['name']:<20} {prop['sqm']:>3}m²{'':<5} {prop['location']:<12} €{price:>15,}")
+            else:
+                print(f"{prop['name']:<20} ERROR: {response.status_code}")
+        except Exception as e:
+            print(f"{prop['name']:<20} ERROR: {e}")
+
+    print("\n✓ Property price prediction test completed!")
+    return True
+
 if __name__ == "__main__":
     print("="*60)
     print("Real Good Estate - ML Backend Test Suite")
@@ -106,6 +172,7 @@ if __name__ == "__main__":
     # Run prediction tests
     test_prediction()
     test_multiple_scenarios()
+    test_property_price_prediction()  # NEW TEST
 
     print("\n" + "="*60)
     print("All tests completed!")

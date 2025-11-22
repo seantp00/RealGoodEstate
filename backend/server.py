@@ -3,8 +3,6 @@ from flask_cors import CORS
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
-import pickle
-import os
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend communication
@@ -17,6 +15,7 @@ class MLPredictor:
     def __init__(self):
         self.readiness_model = None
         self.likelihood_model = None
+        self.property_price_model = None
         self.poly_features = PolynomialFeatures(degree=2)
         self.train_models()
 
@@ -109,9 +108,52 @@ class MLPredictor:
         self.likelihood_model = LinearRegression()
         self.likelihood_model.fit(X_likelihood, y_likelihood)
 
+        # Generate training data for PROPERTY PRICE model
+        # Features: [sqm, rooms, bathrooms, location_premium, condition, year_built_age]
+        sqm_values = np.random.uniform(50, 250, n_samples)
+        rooms_values = np.random.uniform(1, 6, n_samples)
+        bathrooms_values = np.random.uniform(1, 4, n_samples)
+        location_premium = np.random.uniform(0, 2, n_samples)  # 0=rural, 1=city, 2=premium
+        condition = np.random.uniform(0, 2, n_samples)  # 0=renovation, 1=good, 2=new
+        year_age = np.random.uniform(0, 100, n_samples)  # age of property in years
+
+        X_property = []
+        y_property = []
+
+        for i in range(n_samples):
+            # Base price calculation with realistic German market data
+            # Average: 4000-8000 EUR per sqm depending on location
+            base_price_per_sqm = 3500 + (location_premium[i] * 2000)
+
+            # Adjustments
+            room_bonus = rooms_values[i] * 5000  # Extra value per room
+            bathroom_bonus = bathrooms_values[i] * 8000  # Bathrooms add value
+            condition_factor = 1.0 + (condition[i] * 0.15)  # Up to 30% more for new
+            age_penalty = max(0, 1 - (year_age[i] / 200))  # Older = less valuable
+
+            # Calculate price
+            price = (sqm_values[i] * base_price_per_sqm * condition_factor * age_penalty +
+                    room_bonus + bathroom_bonus)
+
+            # Add realistic noise
+            price += np.random.normal(0, price * 0.05)  # 5% noise
+            price = max(50000, price)  # Minimum price
+
+            X_property.append([sqm_values[i], rooms_values[i], bathrooms_values[i],
+                             location_premium[i], condition[i], year_age[i]])
+            y_property.append(price)
+
+        X_property = np.array(X_property)
+        y_property = np.array(y_property)
+
+        # Train linear regression for property price
+        self.property_price_model = LinearRegression()
+        self.property_price_model.fit(X_property, y_property)
+
         print("[OK] ML Models trained successfully!")
         print(f"  Readiness Model R^2 Score: {self.readiness_model.score(X_readiness_poly, y_readiness):.4f}")
         print(f"  Likelihood Model R^2 Score: {self.likelihood_model.score(X_likelihood, y_likelihood):.4f}")
+        print(f"  Property Price Model R^2 Score: {self.property_price_model.score(X_property, y_property):.4f}")
 
     def predict_readiness(self, income, equity, savings, target, marital, kids):
         """
@@ -169,6 +211,39 @@ class MLPredictor:
 
         return int(likelihood), int(future_equity)
 
+    def predict_property_price(self, sqm, rooms, bathrooms, location_type, condition, year_built):
+        """
+        Predict property price using linear regression
+
+        Parameters:
+        - sqm: Living area in square meters
+        - rooms: Number of rooms
+        - bathrooms: Number of bathrooms
+        - location_type: 'rural' (0), 'city' (1), or 'premium' (2)
+        - condition: 'renovation' (0), 'good' (1), or 'new' (2)
+        - year_built: Year the property was built
+        """
+        # Convert location type to numeric
+        location_map = {'rural': 0, 'city': 1, 'premium': 2}
+        location_premium = location_map.get(location_type, 1)
+
+        # Convert condition to numeric
+        condition_map = {'renovation': 0, 'good': 1, 'new': 2}
+        condition_value = condition_map.get(condition, 1)
+
+        # Calculate age of property
+        current_year = 2025
+        year_age = max(0, current_year - year_built)
+
+        # Prepare features for prediction
+        X = np.array([[sqm, rooms, bathrooms, location_premium, condition_value, year_age]])
+
+        # Predict
+        price = self.property_price_model.predict(X)[0]
+        price = max(50000, price)  # Minimum price
+
+        return int(price)
+
 # Initialize ML predictor
 predictor = MLPredictor()
 
@@ -224,6 +299,61 @@ def predict():
                 'readiness_model': 'Polynomial Regression (degree 2)',
                 'likelihood_model': 'Linear Regression with feature engineering'
             }
+        }
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/predict-property-price', methods=['POST'])
+def predict_property_price():
+    """
+    Property price prediction endpoint
+    Expected JSON payload:
+    {
+        "sqm": float,
+        "rooms": float,
+        "bathrooms": float,
+        "location": str,  // 'rural', 'city', or 'premium'
+        "condition": str, // 'renovation', 'good', or 'new'
+        "yearBuilt": int
+    }
+    """
+    try:
+        data = request.json
+
+        # Extract parameters with defaults
+        sqm = float(data.get('sqm', 100))
+        rooms = float(data.get('rooms', 3))
+        bathrooms = float(data.get('bathrooms', 1))
+        location = data.get('location', 'city')
+        condition = data.get('condition', 'good')
+        year_built = int(data.get('yearBuilt', 2000))
+
+        # Validate inputs
+        if sqm <= 0:
+            return jsonify({'error': 'Square meters must be greater than 0'}), 400
+        if rooms < 0 or bathrooms < 0:
+            return jsonify({'error': 'Rooms and bathrooms must be non-negative'}), 400
+
+        # Get prediction
+        predicted_price = predictor.predict_property_price(
+            sqm, rooms, bathrooms, location, condition, year_built
+        )
+
+        # Return prediction
+        response = {
+            'predictedPrice': predicted_price,
+            'inputs': {
+                'sqm': sqm,
+                'rooms': rooms,
+                'bathrooms': bathrooms,
+                'location': location,
+                'condition': condition,
+                'yearBuilt': year_built
+            },
+            'model_info': 'Linear Regression with German real estate market data'
         }
 
         return jsonify(response), 200

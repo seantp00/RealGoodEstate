@@ -42,6 +42,80 @@
         }
     };
 
+    // --- NEW: Property Price Calculation with ML Backend ---
+    app.calculatePropertyPrice = async function() {
+        // Get property parameters from form
+        const sqm = parseFloat(document.getElementById('inp-sqm')?.value || 100);
+        const rooms = parseFloat(document.getElementById('inp-rooms')?.value || 3);
+        const bathrooms = parseFloat(document.getElementById('inp-bathrooms')?.value || 1);
+        const location = document.getElementById('inp-property-location')?.value || 'city';
+        const condition = document.getElementById('inp-condition')?.value || 'good';
+        const yearBuilt = parseInt(document.getElementById('inp-year-built')?.value || 2000);
+
+        try {
+            // Show loading state
+            const priceStatus = document.getElementById('price-status');
+            if (priceStatus) priceStatus.innerText = '(calculating...)';
+
+            // Call ML backend for property price prediction
+            const response = await fetch('http://localhost:5000/api/predict-property-price', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sqm: sqm,
+                    rooms: rooms,
+                    bathrooms: bathrooms,
+                    location: location,
+                    condition: condition,
+                    yearBuilt: yearBuilt
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Property price prediction failed: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const predictedPrice = result.predictedPrice;
+
+            // Update the target price input with predicted value
+            const targetInput = document.getElementById('inp-target');
+            if (targetInput) {
+                targetInput.value = predictedPrice;
+                // Highlight that this is AI-predicted
+                targetInput.classList.add('bg-blue-50');
+                setTimeout(() => targetInput.classList.remove('bg-blue-50'), 2000);
+            }
+
+            // Update status message
+            if (priceStatus) {
+                priceStatus.innerText = '(AI Estimated)';
+                priceStatus.classList.add('text-green-600');
+                setTimeout(() => {
+                    priceStatus.innerText = '';
+                    priceStatus.classList.remove('text-green-600');
+                }, 3000);
+            }
+
+            console.log('✓ Property price predicted:', result);
+
+        } catch (error) {
+            console.error('Error predicting property price:', error);
+            const priceStatus = document.getElementById('price-status');
+            if (priceStatus) {
+                priceStatus.innerText = '(estimate failed)';
+                priceStatus.classList.add('text-red-600');
+                setTimeout(() => {
+                    priceStatus.innerText = '';
+                    priceStatus.classList.remove('text-red-600');
+                }, 3000);
+            }
+            // Silently fail - user can still enter manual price
+        }
+    };
+
     app.runAnalysis = async function() {
         // 1. Gather Inputs
         app.data.income = parseFloat(document.getElementById('inp-income').value);
