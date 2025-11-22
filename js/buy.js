@@ -281,6 +281,7 @@
         if (!grid || !msg) return;
 
         grid.innerHTML = '';
+        msg.classList.add('hidden');
         if(!items || items.length === 0) {
             const bud = (typeof effectiveBudget === 'number' && effectiveBudget > 0) ? effectiveBudget : app.data.currPower;
             msg.innerHTML = `No properties found under <b>${app.fmt(bud)}</b> in ${app.data.location}.`;
@@ -288,28 +289,168 @@
             return;
         }
 
-        items.forEach(item => {
-            const img = (item.images && item.images.length > 0) ? item.images[0].originalUrl : 'https://placehold.co/600x400/E6F2FA/005EA8?text=Listing';
-            grid.innerHTML += `
-                <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all group">
-                    <div class="h-48 bg-slate-100 relative overflow-hidden">
-                        <img src="${img}" alt="${(item.title || 'Property listing').replace(/"/g, '&quot;')}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/E6F2FA/005EA8?text=No+Image'">
-                        <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-3">
-                            <span class="text-white font-bold">${item.buyingPrice === null ? 'Price on Request' : app.fmt(item.buyingPrice)}</span>
-                        </div>
-                    </div>
-                    <div class="p-4">
-                        <h4 class="font-bold text-slate-800 text-sm truncate mb-1">${item.title || 'Apartment'}</h4>
-                        <p class="text-xs text-slate-500 mb-3"><i class="fa-solid fa-map-pin"></i> ${item.address.city}</p>
-                        <div class="flex justify-between text-xs text-slate-600 border-t pt-2">
-                            <span>${item.rooms} Rooms</span>
-                            <span>${Math.round(item.squareMeter)} m²</span>
-                        </div>
-                    </div>
-                </div>
-            `;
+        items.forEach((item, idx) => {
+
+            // Iterate over images to find the first available one
+            let img = 'https://placehold.co/600x400/E6F2FA/005EA8?text=Listing';
+            if (item.images && item.images.length > 0) {
+                console.log('[buy.js] Item has', item.images.length, 'images:', item.images);
+                for (let i = 0; i < item.images.length; i++) {
+                    console.log('[buy.js] Checking image', i, ':', item.images[i]);
+                    try{
+                        if (item.images[i] && item.images[i].originalUrl) {
+                            img = item.images[i].originalUrl;
+                            console.log('[buy.js] Using image:', img);
+                            break;
+                        }
+                    }catch(e){
+                        console.error('[buy.js] Error checking image:', e);
+                    }
+                    
+                }
+            } else {
+                console.log('[buy.js] No images available for this item');
+            }
+            
+            // Extract platform URLs
+            const platforms = item.platforms || [];
+             const platformsJson = JSON.stringify(platforms.map(p => ({
+                name: p.name || 'Platform',
+                url: p.url,
+                active: p.active,
+            }))); 
+            //const platformsJson = JSON.stringify();
+
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all group';
+
+            const top = document.createElement('div');
+            top.className = 'h-48 bg-slate-100 relative overflow-hidden';
+
+            const imgEl = document.createElement('img');
+            imgEl.src = img;
+            imgEl.alt = item.title || 'Property listing';
+            imgEl.className = platforms.length > 0 
+                ? 'w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 cursor-pointer'
+                : 'w-full h-full object-cover group-hover:scale-105 transition-transform duration-500';
+            imgEl.dataset.platforms = platformsJson;
+            imgEl.onerror = function(){ this.src = 'https://placehold.co/600x400/E6F2FA/005EA8?text=No+Image'; };
+            
+            // Add click handler for image
+            if (platforms.length > 0) {
+                imgEl.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const platformData = JSON.parse(this.dataset.platforms || '[]');
+                    console.log('Platform data:', platformData);
+                    if(platformData) {
+                        for (let i = 0; i < platformData.length; i++) {
+                            if (platformData[i] && platformData[i].url && platformData[i].active != null) {
+                                window.open(platformData[i].url, '_blank', 'noopener,noreferrer');
+                                break;
+                            }
+                        }
+                    }else{
+                        openPlatformModal(platformData);
+                    }
+                });
+            }
+
+            const badge = document.createElement('div');
+            badge.className = 'absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-3 pointer-events-none';
+            const priceSpan = document.createElement('span');
+            priceSpan.className = 'text-white font-bold';
+            priceSpan.innerHTML = item.buyingPrice === null ? 'Price on Request' : app.fmt(item.buyingPrice);
+            badge.appendChild(priceSpan);
+
+            // Add website link indicator (only visible on hover)
+            const linkIndicator = document.createElement('div');
+            linkIndicator.className = 'absolute top-2 right-2 px-2 py-1 rounded text-xs font-medium pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200';
+            if (platforms.length > 0) {
+                linkIndicator.className += ' bg-green-500 text-white';
+                linkIndicator.innerHTML = '<i class="fa-solid fa-external-link-alt mr-1"></i>Go to website';
+            } else {
+                linkIndicator.className += ' bg-gray-500 text-white';
+                linkIndicator.innerHTML = 'No website';
+            }
+
+            top.appendChild(imgEl);
+            top.appendChild(badge);
+            top.appendChild(linkIndicator);
+
+            const body = document.createElement('div');
+            body.className = 'p-4';
+            
+            const title = document.createElement('h4');
+            title.className = 'font-bold text-slate-800 text-sm truncate mb-1';
+            title.innerText = item.title || 'Apartment';
+            
+            const loc = document.createElement('p');
+            loc.className = 'text-xs text-slate-500 mb-3';
+            loc.innerHTML = `<i class="fa-solid fa-map-pin"></i> ${item.address && item.address.city ? item.address.city : ''}`;
+            
+            const footer = document.createElement('div');
+            footer.className = 'flex justify-between text-xs text-slate-600 border-t pt-2';
+            
+            const rooms = document.createElement('span');
+            rooms.innerText = `${item.rooms != null ? item.rooms : '0'} Rooms`;
+            
+            const sqm = document.createElement('span');
+            sqm.innerText = `${item.squareMeter ? Math.round(item.squareMeter) : 'N/A'} m²`;
+            
+            footer.appendChild(rooms);
+            footer.appendChild(sqm);
+
+            body.appendChild(title);
+            body.appendChild(loc);
+            body.appendChild(footer);
+
+            card.appendChild(top);
+            card.appendChild(body);
+            grid.appendChild(card);
         });
     };
+
+    // Modal to display multiple platform URLs
+    function openPlatformModal(platforms) {
+        const modal = document.getElementById('links-modal');
+        const body = document.getElementById('links-modal-body');
+        const close = document.getElementById('links-modal-close');
+        const backdrop = document.getElementById('links-modal-backdrop');
+        
+        if (!modal || !body) return;
+        
+        body.innerHTML = '';
+        platforms.forEach(platform => {
+            if (!platform.url) return;
+            
+            const row = document.createElement('div');
+            row.className = 'flex items-center justify-between p-3 border rounded hover:bg-slate-50 transition-colors';
+            
+            const nameEl = document.createElement('div');
+            nameEl.className = 'text-sm font-medium text-slate-700';
+            nameEl.innerText = platform.name || 'Platform';
+            
+            const btn = document.createElement('button');
+            btn.className = 'bg-interhyp-blue text-white px-4 py-1 rounded text-sm hover:bg-blue-700 transition-colors';
+            btn.innerText = 'Open';
+            btn.addEventListener('click', () => {
+                window.open(platform.url, '_blank', 'noopener,noreferrer');
+            });
+            
+            row.appendChild(nameEl);
+            row.appendChild(btn);
+            body.appendChild(row);
+        });
+        
+        modal.classList.remove('hidden');
+        
+        if (close) {
+            close.onclick = () => modal.classList.add('hidden');
+        }
+        if (backdrop) {
+            backdrop.onclick = () => modal.classList.add('hidden');
+        }
+    }
     // Try setup filter UI in case DOM is already present. If not, setup will run later when needed.
     try { setupFilterUI(); } catch(e) { /* ignore */ }
 
