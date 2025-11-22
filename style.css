@@ -1,3 +1,11 @@
+/* Interhyp Colors */
+/* Corporate Blue: #005EA8 */
+/* Deep Blue: #003D6E */
+/* Light Background: #E6F2FA */
+/* Cyan Accent: #00C0F3 */
+/* Success: #10B981 */
+/* Warning: #F59E0B */
+
 body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; }
 .glass-panel { background: white; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
 .nav-active { color: #005EA8; border-bottom: 2px solid #005EA8; }

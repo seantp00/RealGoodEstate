@@ -1,3 +1,21 @@
+tailwind.config = {
+    theme: {
+        extend: {
+            colors: {
+                interhyp: {
+                    blue: '#005EA8',    // Corporate Blue
+                    dark: '#003D6E',    // Deep Blue
+                    light: '#E6F2FA',   // Light Background
+                    accent: '#00C0F3',  // Cyan Accent
+                    success: '#10B981',
+                    warning: '#F59E0B'
+                }
+            },
+            fontFamily: { sans: ['Inter', 'sans-serif'] }
+        }
+    }
+}
+
 const app = {
     data: {
         income: 0, equity: 0, savings: 0, location: '',
