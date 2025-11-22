@@ -24,6 +24,9 @@ tailwind.config = {
             target: 0, years: 0, rate: 5.0,
             marital: 'married', kids: 0, riskName: 'Balanced',
             currPower: 0,
+            sqm: 0,
+            rooms: 0,
+            yearBuilt: 0,
             // One-time override for Buy view budget (do not mutate currPower)
             buyBudgetOverride: null,
             useBudgetOverrideOnce: false

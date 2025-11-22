@@ -126,6 +126,9 @@
         app.data.years = parseInt(document.getElementById('inp-years').value);
         app.data.marital = document.getElementById('inp-marital').value;
         app.data.kids = parseInt(document.getElementById('inp-kids').value);
+        app.data.sqm = parseFloat(document.getElementById('inp-sqm')?.value || 0);
+        app.data.rooms = parseFloat(document.getElementById('inp-rooms')?.value || 0);
+        app.data.yearBuilt = parseInt(document.getElementById('inp-year-built')?.value || 0);
 
         // ---------------------------------------------------------
         // AI/ML PREDICTIONS USING PYTHON BACKEND

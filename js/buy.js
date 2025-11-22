@@ -9,18 +9,43 @@
         const locEl = document.getElementById('api-loc');
         const budEl = document.getElementById('api-budget');
         if (locEl) locEl.innerText = app.data.location;
+
         // Determine effective budget (respect one-time override if requested)
         const effectiveBudget = (app.data.useBudgetOverrideOnce && typeof app.data.buyBudgetOverride === 'number' && app.data.buyBudgetOverride > 0)
             ? app.data.buyBudgetOverride
             : app.data.currPower;
-
         // Sync effective budget to filter UI if not set (default value)
         setupFilterUI();
         const maxPriceInput = document.getElementById('filter-max-price');
         if (maxPriceInput && !maxPriceInput.value) {
             maxPriceInput.value = effectiveBudget;
-            updateActiveSummary();
         }
+
+        const minSqmInput = document.getElementById('filter-min-sqm');
+        if (minSqmInput && !minSqmInput.value) {
+            minSqmInput.value = app.data.sqm;
+        }
+
+        const minRoomsInput = document.getElementById('filter-min-rooms');
+        if (minRoomsInput && !minRoomsInput.value) {
+            minRoomsInput.value = app.data.rooms;
+        }
+
+        const minYearInput = document.getElementById('filter-min-year');
+        if (minYearInput && !minYearInput.value) {
+            minYearInput.value = app.data.yearBuilt;
+        }
+
+        const priceOrdering = document.getElementById('filter-price-listed');
+        if (priceOrdering && !priceOrdering.checked) {
+            priceOrdering.checked = true;
+        }
+
+        const sortOrderEl = document.getElementById('filter-sort-order');
+        if (sortOrderEl) sortOrderEl.value = 'desc';
+
+        updateActiveSummary();
+
 
         // Immediately clear one-time override after capturing to avoid races with rapid navigation
         if (app.data.useBudgetOverrideOnce) {
