@@ -1,6 +1,9 @@
 (function(){
     const app = window.app;
 
+    // Track whether defaults have been applied to avoid reapplying after clear
+    let _defaultsApplied = false;
+
     app.fetchListings = async function(){
         const grid = document.getElementById('listings-grid');
         const msg = document.getElementById('listings-msg');
@@ -16,38 +19,44 @@
             : app.data.currPower;
         // Sync effective budget to filter UI if not set (default value)
         setupFilterUI();
-        const maxPriceInput = document.getElementById('filter-max-price');
-        if (maxPriceInput && !maxPriceInput.value) {
-            maxPriceInput.value = effectiveBudget;
-        }
+        
+        // Only apply defaults once on first load, not after user clears
+        if (!_defaultsApplied) {
+            const maxPriceInput = document.getElementById('filter-max-price');
+            if (maxPriceInput && !maxPriceInput.value) {
+                maxPriceInput.value = effectiveBudget;
+            }
 
-        const minSqmInput = document.getElementById('filter-min-sqm');
-        if (minSqmInput && !minSqmInput.value) {
-            minSqmInput.value = app.data.sqm;
-        }
+            const minSqmInput = document.getElementById('filter-min-sqm');
+            if (minSqmInput && !minSqmInput.value) {
+                minSqmInput.value = app.data.sqm;
+            }
 
-        const minRoomsInput = document.getElementById('filter-min-rooms');
-        if (minRoomsInput && !minRoomsInput.value) {
-            minRoomsInput.value = app.data.rooms;
-        }
+            const minRoomsInput = document.getElementById('filter-min-rooms');
+            if (minRoomsInput && !minRoomsInput.value) {
+                minRoomsInput.value = app.data.rooms;
+            }
 
-        const minYearInput = document.getElementById('filter-min-year');
-        if (minYearInput && !minYearInput.value) {
-            minYearInput.value = app.data.yearBuilt;
-        }
+            const minYearInput = document.getElementById('filter-min-year');
+            if (minYearInput && !minYearInput.value) {
+                minYearInput.value = app.data.yearBuilt;
+            }
 
-        const priceOrdering = document.getElementById('filter-price-listed');
-        if (priceOrdering && !priceOrdering.checked) {
-            priceOrdering.checked = true;
-        }
+            const priceOrdering = document.getElementById('filter-price-listed');
+            if (priceOrdering && !priceOrdering.checked) {
+                priceOrdering.checked = true;
+            }
 
-        const sortOrderEl = document.getElementById('filter-sort-order');
-        if (sortOrderEl) sortOrderEl.value = 'desc';
+            const sortOrderEl = document.getElementById('filter-sort-order');
+            if (sortOrderEl) sortOrderEl.value = 'desc';
+
+            _defaultsApplied = true;
+            console.log('[buy.js] Applied default filters (first load only)');
+        }
 
         updateActiveSummary();
 
 
-        // Immediately clear one-time override after capturing to avoid races with rapid navigation
         if (app.data.useBudgetOverrideOnce) {
             app.data.useBudgetOverrideOnce = false;
             app.data.buyBudgetOverride = null;
@@ -76,9 +85,11 @@
             if (!res.ok) throw new Error('API Error');
             const data = await res.json();
             const allListings = data.results || [];
+            for(let i=0; i<allListings.length; i++){
+                console.log('[buy.js] Listing', i, ':', allListings[i].type);
+            }
             const matches = allListings.filter(l => l.buyingPrice <= effectiveBudget && l.buyingPrice >= 0);
             console.log('[buy.js] Matches found (pre-filter):', matches.length);
-            // Read UI filters and apply them
             const filters = getActiveFilters();
             const filtered = applyFilters(matches, filters);
             console.log('[buy.js] Matches after UI filters:', filtered.length, filters);
@@ -97,7 +108,6 @@
     // Setup filter panel handlers (idempotent)
     function setupFilterUI() {
         if (_filterUISetup) return;
-
         const openBtn = document.getElementById('btn-open-filters');
         const closeBtn = document.getElementById('btn-close-filters');
         const backdrop = document.getElementById('filter-panel-backdrop');
@@ -118,16 +128,15 @@
         if (closeBtn) closeBtn.addEventListener('click', closePanel);
         if (backdrop) backdrop.addEventListener('click', closePanel);
         if (applyBtn) applyBtn.addEventListener('click', function(){
-            // Apply: fetch listings (will read filter values and apply client-side)
             closePanel();
             app.fetchListings();
         });
         if (clearBtn) clearBtn.addEventListener('click', function(){
-            // Clear all filter inputs
             const inputs = panel.querySelectorAll('input');
             inputs.forEach(i => { if (i.type === 'checkbox') i.checked = false; else i.value = ''; });
             const selects = panel.querySelectorAll('select');
             selects.forEach(s => { s.selectedIndex = 0; });
+            // Don't reset _defaultsApplied flag - keep filters cleared
             updateActiveSummary();
             app.fetchListings();
         });
@@ -174,21 +183,18 @@
         return filters;
     }
 
-    // Utility: parse number or return null
     function parseNumber(v) {
         if (v === null || v === undefined || v === '') return null;
         const n = Number(v);
         return Number.isFinite(n) ? n : null;
     }
 
-    // Utility: parse date string to Date or null
     function parseDate(v) {
         if (!v) return null;
         const d = new Date(v);
         return isNaN(d.getTime()) ? null : d;
     }
 
-    // Get first non-null field from possible keys or return null
     function getFirstField(item, keys) {
         for (const k of keys) {
             if (!item) continue;
@@ -198,11 +204,9 @@
         return null;
     }
 
-    // Apply filters and sorting to items
     function applyFilters(items, filters) {
         if (!filters) return items;
         let out = items.filter(item => {
-            // Price
             const price = getFirstField(item, ['buyingPrice', 'price', 'priceValue']);
             if (filters.priceListedOnly) {
                 if (price === null || price === undefined || price === 0) return false;
@@ -211,17 +215,14 @@
             if (filters.minPrice != null && price === null) return false;
             if (filters.maxPrice != null && price != null && Number(price) > filters.maxPrice) return false;
 
-            // Rooms
             const rooms = getFirstField(item, ['rooms', 'roomCount']);
             if (filters.minRooms != null && rooms != null && Number(rooms) < filters.minRooms) return false;
             if (filters.maxRooms != null && rooms != null && Number(rooms) > filters.maxRooms) return false;
 
-            // Square meters
             const sqm = getFirstField(item, ['squareMeter', 'area', 'size']);
             if (filters.minSqm != null && sqm != null && Number(sqm) < filters.minSqm) return false;
             if (filters.maxSqm != null && sqm != null && Number(sqm) > filters.maxSqm) return false;
 
-            // Price per sqm: try direct field or compute
             let ppsqm = getFirstField(item, ['pricePerSqm', 'pricePerSquareMeter']);
             if ((ppsqm === null || ppsqm === undefined) && price != null && sqm != null && Number(sqm) > 0) {
                 ppsqm = Number(price) / Number(sqm);
@@ -229,12 +230,10 @@
             if (filters.minPPSqm != null && ppsqm != null && Number(ppsqm) < filters.minPPSqm) return false;
             if (filters.maxPPSqm != null && ppsqm != null && Number(ppsqm) > filters.maxPPSqm) return false;
 
-            // Construction year
             const cYear = getFirstField(item, ['constructionYear', 'yearBuilt', 'builtYear']);
             if (filters.minYear != null && cYear != null && Number(cYear) < filters.minYear) return false;
             if (filters.maxYear != null && cYear != null && Number(cYear) > filters.maxYear) return false;
 
-            // Publish / updated dates (try multiple keys)
             const pub = parseDate(getFirstField(item, ['publishDate', 'publishedAt', 'datePublished']));
             if (filters.publishedFrom && pub && pub < filters.publishedFrom) return false;
             if (filters.publishedTo && pub && pub > filters.publishedTo) return false;
@@ -246,14 +245,12 @@
             return true;
         });
 
-        // Sorting
         const key = filters.sortKey || 'buyingPrice';
         const order = (filters.sortOrder || 'asc').toLowerCase();
         out.sort((a, b) => {
             const aVal = getFirstField(a, [key, key === 'pricePerSqm' ? 'pricePerSqm' : key]);
             const bVal = getFirstField(b, [key, key === 'pricePerSqm' ? 'pricePerSqm' : key]);
 
-            // For pricePerSqm, attempt compute if missing
             let aNum = aVal;
             let bNum = bVal;
             if ((aNum === null || aNum === undefined) && key === 'pricePerSqm') {
@@ -267,7 +264,6 @@
                 if (bPrice != null && bSqm != null && Number(bSqm) > 0) bNum = Number(bPrice) / Number(bSqm);
             }
 
-            // Date keys -> convert
             const dateKeys = ['publishDate','publishedAt','datePublished','updatedAt','lastUpdated','modified'];
             if (dateKeys.includes(key)) {
                 const da = parseDate(aVal) || 0;
@@ -286,7 +282,6 @@
         return out;
     }
 
-    // Update the small summary next to Filters button
     function updateActiveSummary() {
         const s = document.getElementById('active-filter-summary');
         if (!s) return;
@@ -315,8 +310,6 @@
         }
 
         items.forEach((item, idx) => {
-
-            // Iterate over images to find the first available one
             let img = 'https://placehold.co/600x400/E6F2FA/005EA8?text=Listing';
             if (item.images && item.images.length > 0) {
                 console.log('[buy.js] Item has', item.images.length, 'images:', item.images);
@@ -336,15 +329,12 @@
             } else {
                 console.log('[buy.js] No images available for this item');
             }
-            
-            // Extract platform URLs
             const platforms = item.platforms || [];
              const platformsJson = JSON.stringify(platforms.map(p => ({
                 name: p.name || 'Platform',
                 url: p.url,
                 active: p.active,
             }))); 
-            //const platformsJson = JSON.stringify();
 
             const card = document.createElement('div');
             card.className = 'bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all group';
@@ -361,7 +351,6 @@
             imgEl.dataset.platforms = platformsJson;
             imgEl.onerror = function(){ this.src = 'https://placehold.co/600x400/E6F2FA/005EA8?text=No+Image'; };
             
-            // Add click handler for image
             if (platforms.length > 0) {
                 imgEl.addEventListener('click', function(e) {
                     e.preventDefault();
@@ -476,7 +465,6 @@
             backdrop.onclick = () => modal.classList.add('hidden');
         }
     }
-    // Try setup filter UI in case DOM is already present. If not, setup will run later when needed.
-    try { setupFilterUI(); } catch(e) { /* ignore */ }
+    try { setupFilterUI(); } catch(e) {}
 
 })();
