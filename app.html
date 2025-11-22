@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RealGoodEstate | Dream. Plan. Buy.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="text-slate-800 flex flex-col min-h-screen">
+
+    <!-- Navigation (included) -->
+    <div id="nav-container"></div>
+
+    <!-- Main Application -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+
+        <!-- VIEW 1: DREAM (included) -->
+        <div id="dream-container"></div>
+
+        <!-- VIEW 2: PLAN (included) -->
+        <div id="plan-container"></div>
+
+        <!-- VIEW 3: BUY (included) -->
+        <div id="buy-container"></div>
+
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 py-8 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-slate-400 text-sm">&copy; 2025 RealGoodEstate. Interhyp HackaTUM Challenge.</p>
+        </div>
+    </footer>
+
+    <script>
+        async function loadPartials() {
+            const parts = [
+                { sel: '#nav-container', file: 'navigation.html' },
+                { sel: '#dream-container', file: 'dream.html' },
+                { sel: '#plan-container', file: 'plan.html' },
+                { sel: '#buy-container', file: 'buy.html' }
+            ];
+            for (const p of parts) {
+                try {
+                    const res = await fetch(p.file);
+                    const html = await res.text();
+                    const el = document.querySelector(p.sel);
+                    if (el) el.innerHTML = html;
+                } catch (e) {
+                    console.error('Failed to load', p.file, e);
+                }
+            }
+            if (window.app && typeof app.init === 'function') app.init();
+        }
+        document.addEventListener('DOMContentLoaded', loadPartials);
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>

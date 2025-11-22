@@ -26,10 +26,13 @@ const app = {
     chart: null,
 
     init() {
-        // Listen for enter key on chat
-        document.getElementById('chat-input').addEventListener('keypress', (e) => {
-            if(e.key === 'Enter') app.sendChat();
-        });
+        // Listen for enter key on chat (if chat input exists on the current view)
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput) {
+            chatInput.addEventListener('keypress', (e) => {
+                if(e.key === 'Enter') app.sendChat();
+            });
+        }
     },
 
     nav(view) {
