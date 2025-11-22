@@ -42,7 +42,7 @@
         }
     };
 
-    app.runAnalysis = function() {
+    app.runAnalysis = async function() {
         // 1. Gather Inputs
         app.data.income = parseFloat(document.getElementById('inp-income').value);
         app.data.equity = parseFloat(document.getElementById('inp-equity').value);
@@ -53,57 +53,92 @@
         app.data.marital = document.getElementById('inp-marital').value;
         app.data.kids = parseInt(document.getElementById('inp-kids').value);
 
-        // METRIC 1: FAMILY-ADJUSTED BUYING POWER
-        let costDeduction = 0;
-        if(app.data.marital === 'married') costDeduction += 400;
-        costDeduction += (app.data.kids * 300);
+        // ---------------------------------------------------------
+        // AI/ML PREDICTIONS USING PYTHON BACKEND
+        // ---------------------------------------------------------
+        try {
+            // Show loading indicator
+            const loadingMsg = document.createElement('div');
+            loadingMsg.id = 'ml-loading';
+            loadingMsg.style.cssText = 'position:fixed;top:20px;right:20px;background:#005EA8;color:white;padding:12px 20px;border-radius:8px;z-index:9999;box-shadow:0 4px 6px rgba(0,0,0,0.1);';
+            loadingMsg.innerHTML = '<i class="fas fa-robot"></i> AI calculating predictions...';
+            document.body.appendChild(loadingMsg);
 
-        const adjustedIncome = Math.max(1000, app.data.income - costDeduction);
+            // Call Python ML backend
+            const response = await fetch('http://localhost:5000/api/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    income: app.data.income,
+                    equity: app.data.equity,
+                    savings: app.data.savings,
+                    target: app.data.target,
+                    years: app.data.years,
+                    rate: app.data.rate,
+                    marital: app.data.marital,
+                    kids: app.data.kids
+                })
+            });
 
-        // Multiplier 90x monthly disposable income + Equity
-        app.data.currPower = Math.floor((adjustedIncome * 90) + app.data.equity);
+            if (!response.ok) {
+                throw new Error(`Backend server error: ${response.status}`);
+            }
 
-        // METRIC 2: READINESS (Quadratic)
-        const ratio = app.data.currPower / app.data.target;
-        let readiness = ratio >= 1.0 ? 100 : Math.max(0, Math.floor(100 * Math.pow(ratio, 2)));
+            const mlResults = await response.json();
 
-        // METRIC 3: EQUITY PROJECTION (Compound Interest)
-        const monthlyRate = (app.data.rate / 100) / 12;
-        const months = app.data.years * 12;
-        let futureEquity = app.data.equity;
-        for(let i=0; i<months; i++) {
-            futureEquity = (futureEquity * (1 + monthlyRate)) + app.data.savings;
+            // Remove loading indicator
+            document.getElementById('ml-loading')?.remove();
+
+            // Extract ML predictions
+            const readiness = mlResults.readiness;
+            const likelihood = mlResults.likelihood;
+            app.data.currPower = mlResults.currPower;
+            const futureEquity = mlResults.futureEquity;
+
+            console.log('✓ AI/ML Predictions received:', mlResults);
+
+            // ---------------------------------------------------------
+            // UI UPDATES WITH ML PREDICTIONS
+            // ---------------------------------------------------------
+            const byId = (id)=>document.getElementById(id);
+            byId('out-readiness').innerText = readiness + "%";
+            byId('bar-readiness').style.width = readiness + "%";
+            byId('txt-power').innerText = app.fmt(app.data.currPower);
+            byId('cta-power').innerText = app.fmt(app.data.currPower);
+
+            byId('out-likelihood').innerText = likelihood + "%";
+            byId('bar-likelihood').style.width = likelihood + "%";
+            byId('txt-year').innerText = app.data.years;
+            byId('disp-risk-name').innerText = app.data.riskName;
+
+            byId('out-final-equity').innerText = app.fmt(futureEquity);
+
+            // Update Chat Context Text
+            const familyText = app.data.marital === 'married' ? `married with ${app.data.kids} kids` : `single with ${app.data.kids} kids`;
+            byId('chat-status-text').innerText = familyText;
+            byId('chat-risk-text').innerText = app.data.riskName;
+
+            // Family Label
+            byId('disp-family').innerText = app.data.marital === 'married' ? 'Family' : 'Household';
+
+            // Calculate monthly rate for chart
+            const monthlyRate = (app.data.rate / 100) / 12;
+            app.updateChart && app.updateChart(monthlyRate);
+            app.nav && app.nav('plan');
+
+        } catch (error) {
+            // Remove loading indicator
+            document.getElementById('ml-loading')?.remove();
+
+            console.error('Error calling ML backend:', error);
+            alert('⚠️ Could not connect to AI prediction server.\n\n' +
+                  'Please ensure the Python backend is running:\n' +
+                  '1. Open terminal in backend folder\n' +
+                  '2. Run: pip install -r requirements.txt\n' +
+                  '3. Run: python server.py\n\n' +
+                  'Then try again.');
         }
-
-        // METRIC 4: LIKELIHOOD (Logistic)
-        const futurePower = (adjustedIncome * 90) + futureEquity;
-        const coverage = futurePower / app.data.target;
-        let likelihood = Math.max(10, Math.floor(100 / (1 + Math.exp(-10 * (coverage - 0.85)))));
-        if(futurePower >= app.data.target) likelihood = 98;
-
-        // UI UPDATES
-        const byId = (id)=>document.getElementById(id);
-        byId('out-readiness').innerText = readiness + "%";
-        byId('bar-readiness').style.width = readiness + "%";
-        byId('txt-power').innerText = app.fmt(app.data.currPower);
-        byId('cta-power').innerText = app.fmt(app.data.currPower);
-
-        byId('out-likelihood').innerText = likelihood + "%";
-        byId('bar-likelihood').style.width = likelihood + "%";
-        byId('txt-year').innerText = app.data.years;
-        byId('disp-risk-name').innerText = app.data.riskName;
-
-        byId('out-final-equity').innerText = app.fmt(futureEquity);
-
-        // Update Chat Context Text
-        const familyText = app.data.marital === 'married' ? `married with ${app.data.kids} kids` : `single with ${app.data.kids} kids`;
-        byId('chat-status-text').innerText = familyText;
-        byId('chat-risk-text').innerText = app.data.riskName;
-
-        // Family Label
-        byId('disp-family').innerText = app.data.marital === 'married' ? 'Family' : 'Household';
-
-        app.updateChart && app.updateChart(monthlyRate);
-        app.nav && app.nav('plan');
     };
 })();

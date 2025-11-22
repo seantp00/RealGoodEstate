@@ -2,6 +2,33 @@
 
 Here you get the plan on how to make a lot of money and join the group - so stay tuned
 
+## 🤖 NEW: AI/ML Backend Integration
+
+This project now uses **Python Machine Learning** for intelligent predictions! The backend server uses:
+- **NumPy** for numerical computations
+- **Scikit-learn** for ML algorithms (Polynomial Regression & Linear Regression)
+- **Flask** for REST API
+
+### Quick Start (Backend Server)
+
+1. **Install Python dependencies:**
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   ```
+
+2. **Start the ML server:**
+   ```bash
+   python server.py
+   ```
+   OR double-click `start_server.bat`
+
+3. **Open the frontend:**
+   - Open `app.html` in your browser
+   - The frontend will automatically connect to the backend at `http://localhost:5000`
+
+📖 See [backend/README.md](backend/README.md) for detailed documentation.
+
 ## Project Structure (Modular Architecture)
 
 ### HTML Files
