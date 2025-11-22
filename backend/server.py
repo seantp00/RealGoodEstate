@@ -88,12 +88,27 @@ class MLPredictor:
             future_power = (adjusted_income * 90) + future_equity
             coverage = future_power / targets[i]
 
-            # Logistic-based likelihood with noise
+            # Risk adjustment factor: Higher risk = more uncertainty = lower confidence
+            # Conservative (2.5%): +5% confidence boost (more predictable)
+            # Balanced (5%): neutral (baseline)
+            # Aggressive (7.5%): -5% confidence penalty (more volatile)
+            risk_adjustment = 0
+            if rates[i] < 3.5:  # Conservative
+                risk_adjustment = 5  # More reliable, boost likelihood
+            elif rates[i] > 6.5:  # Aggressive
+                risk_adjustment = -5  # Less reliable, reduce likelihood
+
+            # Logistic-based likelihood with noise and risk adjustment
             likelihood = 100 / (1 + np.exp(-10 * (coverage - 0.85)))
             likelihood = max(10, likelihood)
             if future_power >= targets[i]:
                 likelihood = 98
-            likelihood += np.random.normal(0, 2)  # Add small noise
+
+            # Apply risk adjustment
+            likelihood += risk_adjustment
+
+            # Add small noise
+            likelihood += np.random.normal(0, 2)
             likelihood = np.clip(likelihood, 10, 98)
 
             X_likelihood.append([incomes[i], equities[i], savings[i], targets[i],
@@ -158,6 +173,9 @@ class MLPredictor:
     def predict_readiness(self, income, equity, savings, target, marital, kids):
         """
         Predict current readiness using polynomial regression
+
+        Edge case handling: For inputs outside training bounds, uses direct formula
+        to avoid polynomial extrapolation errors.
         """
         # Calculate derived features
         cost_deduction = 400 if marital == 'married' else 0
@@ -166,23 +184,43 @@ class MLPredictor:
         curr_power = (adjusted_income * 90) + equity
         ratio = curr_power / target if target > 0 else 0
 
-        # Prepare features for prediction
-        marital_num = 1 if marital == 'married' else 0
-        X = np.array([[income, equity, savings, target, marital_num, kids,
-                      adjusted_income, curr_power, ratio]])
+        # Check if inputs are within training bounds
+        # Training ranges: income(2k-15k), equity(0-200k), target(100k-800k)
+        within_bounds = (
+            2000 <= income <= 15000 and
+            0 <= equity <= 200000 and
+            100000 <= target <= 800000
+        )
 
-        # Transform to polynomial features
-        X_poly = self.poly_features.transform(X)
+        # For edge cases outside training data, use direct formula
+        # Polynomial regression extrapolates poorly beyond training range
+        if not within_bounds:
+            # Use quadratic readiness formula directly (same as training logic)
+            if ratio >= 1.0:
+                readiness = 100
+            else:
+                readiness = 100 * (ratio ** 2)
+            readiness = max(0, min(100, readiness))
+        else:
+            # Use ML model for predictions within training bounds
+            marital_num = 1 if marital == 'married' else 0
+            X = np.array([[income, equity, savings, target, marital_num, kids,
+                          adjusted_income, curr_power, ratio]])
 
-        # Predict
-        readiness = self.readiness_model.predict(X_poly)[0]
-        readiness = np.clip(readiness, 0, 100)
+            # Transform to polynomial features
+            X_poly = self.poly_features.transform(X)
+
+            # Predict
+            readiness = self.readiness_model.predict(X_poly)[0]
+            readiness = np.clip(readiness, 0, 100)
 
         return int(readiness), int(curr_power)
 
     def predict_likelihood(self, income, equity, savings, target, years, rate, marital, kids):
         """
         Predict success likelihood using linear regression
+
+        Edge case handling: For inputs outside training bounds, uses direct logistic formula.
         """
         # Calculate derived features
         cost_deduction = 400 if marital == 'married' else 0
@@ -200,14 +238,45 @@ class MLPredictor:
         future_power = (adjusted_income * 90) + future_equity
         coverage = future_power / target if target > 0 else 0
 
-        # Prepare features for prediction
-        marital_num = 1 if marital == 'married' else 0
-        X = np.array([[income, equity, savings, target, years, rate,
-                      marital_num, kids, adjusted_income, future_equity, coverage]])
+        # Check if inputs are within training bounds
+        # Training ranges: income(2k-15k), equity(0-200k), target(100k-800k), years(1-15)
+        within_bounds = (
+            2000 <= income <= 15000 and
+            0 <= equity <= 200000 and
+            100000 <= target <= 800000 and
+            1 <= years <= 15 and
+            2.0 <= rate <= 8.0
+        )
 
-        # Predict
-        likelihood = self.likelihood_model.predict(X)[0]
-        likelihood = np.clip(likelihood, 10, 98)
+        # For edge cases outside training data, use direct formula
+        if not within_bounds:
+            # Use logistic formula directly (same as training logic)
+            likelihood = 100 / (1 + np.exp(-10 * (coverage - 0.85)))
+            likelihood = max(10, likelihood)
+            if future_power >= target:
+                likelihood = 98
+
+            # Apply risk adjustment: Higher risk = lower reliability
+            # Conservative (2.5%): +5% confidence boost
+            # Balanced (5%): neutral
+            # Aggressive (7.5%): -5% confidence penalty
+            risk_adjustment = 0
+            if rate < 3.5:  # Conservative
+                risk_adjustment = 5
+            elif rate > 6.5:  # Aggressive
+                risk_adjustment = -5
+
+            likelihood += risk_adjustment
+            likelihood = max(10, min(98, likelihood))
+        else:
+            # Use ML model for predictions within training bounds
+            marital_num = 1 if marital == 'married' else 0
+            X = np.array([[income, equity, savings, target, years, rate,
+                          marital_num, kids, adjusted_income, future_equity, coverage]])
+
+            # Predict
+            likelihood = self.likelihood_model.predict(X)[0]
+            likelihood = np.clip(likelihood, 10, 98)
 
         return int(likelihood), int(future_equity)
 
