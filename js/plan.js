@@ -1,6 +1,33 @@
 (function(){
     const app = window.app;
 
+    // Update the mid "Key Figures" panel values (purely visual)
+    app.updateKeyFigures = function(finalProjectedEquity){
+        try {
+            const fmtNoSymbol = (v) => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(Math.round(Number(v)||0));
+
+            const elBuyingPower = document.getElementById('key-buying-power');
+            const elTargetPrice = document.getElementById('key-target-price');
+            const elProjectedEq = document.getElementById('key-projected-equity');
+            const elDownPayment = document.getElementById('key-down-payment');
+
+            // Inputs sourced from existing app.data and chart math
+            const buyingPower = app?.data?.currPower ?? 0;
+            const targetPrice = app?.data?.target ?? 0;
+            const downPay = (Number(targetPrice) || 0) * 0.20; // keep in sync with chart
+            const projectedEquity = (typeof finalProjectedEquity === 'number' && isFinite(finalProjectedEquity))
+                ? finalProjectedEquity
+                : (app?.data?.equity ?? 0);
+
+            if (elBuyingPower) elBuyingPower.textContent = fmtNoSymbol(buyingPower);
+            if (elTargetPrice) elTargetPrice.textContent = fmtNoSymbol(targetPrice);
+            if (elProjectedEq) elProjectedEq.textContent = fmtNoSymbol(projectedEquity);
+            if (elDownPayment) elDownPayment.textContent = fmtNoSymbol(downPay);
+        } catch (e) {
+            // visual only; fail silently
+        }
+    }
+
     app.updateChart = function(monthlyRate){
         const canvas = document.getElementById('projectionChart');
         if (!canvas) return;
@@ -79,6 +106,10 @@
                 plugins: { legend: { position: 'bottom' } }
             }
         });
+
+        // Update mid panel to reflect current numbers (projected equity aligns with chart's final value)
+        const finalProjected = dataCompound[dataCompound.length - 1] ?? app.data.equity;
+        app.updateKeyFigures(finalProjected);
     };
 
     app.sendChat = async function(){
