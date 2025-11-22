@@ -1,6 +1,25 @@
 (function(){
     const app = window.app;
 
+    // --- Pretty slider fill + live label for years ---
+    const yearsSlider = document.getElementById('inp-years');
+    const yearsLabel = document.getElementById('val-years');
+    function updateYearsFill() {
+        if (!yearsSlider) return;
+        const min = parseFloat(yearsSlider.min) || 0;
+        const max = parseFloat(yearsSlider.max) || 100;
+        const val = parseFloat(yearsSlider.value) || 0;
+        const pct = ((val - min) / (max - min)) * 100;
+        // WebKit/Chromium uses background on the input; Firefox uses progress pseudo which is okay
+        yearsSlider.style.backgroundImage = `linear-gradient(to right, #005EA8 0%, #005EA8 ${pct}%, #CBD5E1 ${pct}%, #CBD5E1 100%)`;
+        if (yearsLabel) yearsLabel.innerText = String(val);
+    }
+    if (yearsSlider) {
+        yearsSlider.addEventListener('input', updateYearsFill);
+        // Initialize on load
+        updateYearsFill();
+    }
+
     app.setRisk = function(level, el) {
         // UI Update
         document.querySelectorAll('.risk-card').forEach(c => c.classList.remove('selected', 'bg-F0F9FF', 'border-interhyp-blue'));
