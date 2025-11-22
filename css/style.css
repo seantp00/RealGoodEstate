@@ -1,0 +1,43 @@
+/* Interhyp Colors */
+/* Corporate Blue: #005EA8 */
+/* Deep Blue: #003D6E */
+/* Light Background: #E6F2FA */
+/* Cyan Accent: #00C0F3 */
+/* Success: #10B981 */
+/* Warning: #F59E0B */
+
+body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; }
+.glass-panel { background: white; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+.nav-active { color: #005EA8; border-bottom: 2px solid #005EA8; }
+.nav-inactive { color: #64748B; }
+
+.loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #005EA8; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Risk Card Selection Styles */
+.risk-card { border: 2px solid transparent; transition: all 0.2s; }
+.risk-card:hover { border-color: #CBD5E1; }
+.risk-card.selected { border-color: #005EA8; background-color: #F0F9FF; }
+
+/* Pretty range slider (cross-browser) */
+.nice-range { -webkit-appearance: none; appearance: none; width: 100%; height: 20px; background: transparent; cursor: pointer; }
+.nice-range:focus { outline: none; }
+/* Filled track via background gradient (set inline by JS) */
+.nice-range { border-radius: 9999px; background-image: linear-gradient(to right, #005EA8 0%, #005EA8 0%, #CBD5E1 0%, #CBD5E1 100%); height: 6px; }
+/* WebKit */
+.nice-range::-webkit-slider-runnable-track { height: 6px; background: transparent; border-radius: 9999px; }
+.nice-range::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: #005EA8; border: 2px solid white; margin-top: -6px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+.nice-range:hover::-webkit-slider-thumb { transform: scale(1.05); }
+/* Firefox */
+.nice-range::-moz-range-track { height: 6px; background: transparent; border-radius: 9999px; }
+.nice-range::-moz-range-progress { height: 6px; background: #005EA8; border-radius: 9999px; }
+.nice-range::-moz-range-thumb { height: 18px; width: 18px; border-radius: 50%; background: #005EA8; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+/* IE/Edge (legacy) */
+.nice-range::-ms-track { height: 6px; background: transparent; border-color: transparent; color: transparent; }
+.nice-range::-ms-fill-lower { background: #005EA8; border-radius: 9999px; }
+.nice-range::-ms-fill-upper { background: #CBD5E1; border-radius: 9999px; }
+.nice-range::-ms-thumb { height: 18px; width: 18px; border-radius: 50%; background: #005EA8; border: 2px solid white; }
+
+/* Chat Styles */
+.chat-bubble { animation: fadeIn 0.3s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }

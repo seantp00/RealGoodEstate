@@ -335,7 +335,7 @@ const app = {
             grid.innerHTML += `
                 <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all group">
                     <div class="h-48 bg-slate-100 relative overflow-hidden">
-                        <img src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/E6F2FA/005EA8?text=No+Image'">
+                        <img src="${img}" alt="${(item.title || 'Property listing').replace(/\"/g, '&quot;')}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/E6F2FA/005EA8?text=No+Image'">
                         <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-3">
                             <span class="text-white font-bold">${this.fmt(item.buyingPrice)}</span>
                         </div>

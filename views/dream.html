@@ -1,0 +1,233 @@
+<section id="view-dream" class="animate-fade-in">
+    <div class="text-center max-w-3xl mx-auto mb-10 mt-4">
+        <h1 class="text-4xl md:text-5xl font-bold mb-4 text-slate-900">Your Financial Blueprint</h1>
+        <p class="text-lg text-slate-500">Map your assets, family situation, and risk appetite. We use regression models to calculate your real buying power.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Financial & Family Profile -->
+        <div class="lg:col-span-7 glass-panel p-8 rounded-xl shadow-sm">
+            <h2 class="text-xl font-bold mb-6 text-interhyp-blue border-b pb-2 flex items-center">
+                <i class="fa-solid fa-users mr-2"></i> Family & Finances
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Basic Finances -->
+                <div>
+                    <label for="inp-income" class="block text-xs font-bold text-slate-500 uppercase mb-1">Net Household Income (Monthly)</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2.5 text-slate-400">€</span>
+                        <input type="number" id="inp-income" value="4500" class="w-full pl-8 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-interhyp-blue outline-none transition-all">
+                    </div>
+                </div>
+                <div>
+                    <label for="inp-equity" class="block text-xs font-bold text-slate-500 uppercase mb-1">Current Equity (Cash)</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2.5 text-slate-400">€</span>
+                        <input type="number" id="inp-equity" value="55000" class="w-full pl-8 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-interhyp-blue outline-none transition-all">
+                    </div>
+                </div>
+                
+                <!-- Family Status (NEW) -->
+                <div>
+                    <label for="inp-marital" class="block text-xs font-bold text-slate-500 uppercase mb-1">Marital Status</label>
+                    <select id="inp-marital" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-interhyp-blue outline-none bg-white">
+                        <option value="single">Single</option>
+                        <option value="married" selected>Married / Partner</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="inp-kids" class="block text-xs font-bold text-slate-500 uppercase mb-1">Children (&lt; 18)</label>
+                    <input type="number" id="inp-kids" value="0" min="0" max="10" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-interhyp-blue outline-none">
+                </div>
+
+                <!-- Savings & Loc -->
+                <div>
+                    <label for="inp-savings" class="block text-xs font-bold text-slate-500 uppercase mb-1">Monthly Savings</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2.5 text-slate-400">€</span>
+                        <input type="number" id="inp-savings" value="900" class="w-full pl-8 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-interhyp-blue outline-none transition-all">
+                    </div>
+                </div>
+                <div>
+                    <label for="inp-location" class="block text-xs font-bold text-slate-500 uppercase mb-1">Search Location</label>
+                    <input type="text" id="inp-location" value="München" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-interhyp-blue outline-none">
+                </div>
+            </div>
+        </div>
+
+        <!-- Goal & Risk Parameters (UPDATED) -->
+        <div class="lg:col-span-5 bg-interhyp-light p-8 rounded-xl border border-blue-100">
+            <h2 class="text-xl font-bold mb-6 text-interhyp-dark flex items-center">
+                <i class="fa-solid fa-chart-line mr-2"></i> Investment Strategy
+            </h2>
+            
+            <div class="space-y-6">
+                <div>
+                    <label for="inp-target" class="block text-xs font-bold text-slate-500 uppercase mb-1">Dream Property Price</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2.5 text-slate-400">€</span>
+                        <input type="number" id="inp-target" value="650000" class="w-full pl-8 pr-4 py-2 border border-blue-200 bg-white rounded-lg focus:ring-2 focus:ring-interhyp-blue outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <label for="inp-years" class="text-sm font-bold text-slate-700">Timeline (<span id="val-years">3</span> Years)</label>
+                    </div>
+                    <input type="range" id="inp-years" class="nice-range" min="1" max="10" value="3">
+                </div>
+
+                <!-- Risk Levels (NEW) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Investment Risk Profile</label>
+                    <div class="space-y-2">
+                        <!-- Conservative -->
+                        <div class="risk-card bg-white p-3 rounded-lg cursor-pointer" onclick="app.setRisk('low', this)">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-slate-700 text-sm">Conservative</span>
+                                <span class="text-xs font-bold bg-green-100 text-green-800 px-2 py-1 rounded">~2.5% APY</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Savings Accounts, Gov Bonds. Low risk, inflation exposure.</p>
+                        </div>
+                        <!-- Balanced -->
+                        <div class="risk-card selected bg-white p-3 rounded-lg cursor-pointer" onclick="app.setRisk('med', this)" id="default-risk">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-slate-700 text-sm">Balanced</span>
+                                <span class="text-xs font-bold bg-blue-100 text-blue-800 px-2 py-1 rounded">~5.0% APY</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">World ETFs, Balanced Funds. Market fluctuation risk.</p>
+                        </div>
+                        <!-- Aggressive -->
+                        <div class="risk-card bg-white p-3 rounded-lg cursor-pointer" onclick="app.setRisk('high', this)">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-slate-700 text-sm">Aggressive</span>
+                                <span class="text-xs font-bold bg-orange-100 text-orange-800 px-2 py-1 rounded">~7.5% APY</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Stocks, Crypto, Sector ETFs. High volatility & capital loss risk.</p>
+                        </div>
+                    </div>
+                    <!-- Risk Warning Box -->
+                    <div id="risk-warning" class="mt-3 text-[10px] text-slate-500 border-l-2 border-blue-300 pl-2 italic">
+                        Past performance is not indicative of future results. Balanced strategy selected.
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="app.runAnalysis()" class="w-full mt-8 bg-interhyp-blue hover:bg-interhyp-dark text-white font-bold py-3 rounded-lg shadow-md transition-all transform hover:-translate-y-1 flex justify-center items-center">
+                Calculate Path <i class="fa-solid fa-calculator ml-2"></i>
+            </button>
+        </div>
+    </div>
+</section>
+
+<script>
+(function(){
+    const app = window.app;
+
+    app.setRisk = function(level, el) {
+        // UI Update
+        document.querySelectorAll('.risk-card').forEach(c => c.classList.remove('selected', 'bg-F0F9FF', 'border-interhyp-blue'));
+        if (el) el.classList.add('selected');
+
+        // Logic Update
+        const warning = document.getElementById('risk-warning');
+        if(level === 'low') {
+            app.data.rate = 2.5;
+            app.data.riskName = 'Conservative';
+            if (warning) warning.innerText = "Low risk selected. Returns may not beat high inflation.";
+        } else if(level === 'med') {
+            app.data.rate = 5.0;
+            app.data.riskName = 'Balanced';
+            if (warning) warning.innerText = "Balanced strategy selected. Moderate market exposure.";
+        } else {
+            app.data.rate = 7.5;
+            app.data.riskName = 'Aggressive';
+            if (warning) warning.innerText = "Warning: High risk selected. Capital loss is possible.";
+        }
+    };
+
+    // --- Pretty slider fill + live label for years ---
+    const yearsSlider = document.getElementById('inp-years');
+    const yearsLabel = document.getElementById('val-years');
+    function updateYearsFill() {
+        if (!yearsSlider) return;
+        const min = parseFloat(yearsSlider.min) || 0;
+        const max = parseFloat(yearsSlider.max) || 100;
+        const val = parseFloat(yearsSlider.value) || 0;
+        const pct = ((val - min) / (max - min)) * 100;
+        // WebKit/Chromium uses background on the input; Firefox uses progress pseudo which is okay
+        yearsSlider.style.backgroundImage = `linear-gradient(to right, #005EA8 0%, #005EA8 ${pct}%, #CBD5E1 ${pct}%, #CBD5E1 100%)`;
+        if (yearsLabel) yearsLabel.innerText = String(val);
+    }
+    if (yearsSlider) {
+        yearsSlider.addEventListener('input', updateYearsFill);
+        // Initialize on load
+        updateYearsFill();
+    }
+
+    app.runAnalysis = function() {
+        // 1. Gather Inputs
+        app.data.income = parseFloat(document.getElementById('inp-income').value);
+        app.data.equity = parseFloat(document.getElementById('inp-equity').value);
+        app.data.savings = parseFloat(document.getElementById('inp-savings').value);
+        app.data.location = document.getElementById('inp-location').value;
+        app.data.target = parseFloat(document.getElementById('inp-target').value);
+        app.data.years = parseInt(document.getElementById('inp-years').value);
+        app.data.marital = document.getElementById('inp-marital').value;
+        app.data.kids = parseInt(document.getElementById('inp-kids').value);
+
+        // METRIC 1: FAMILY-ADJUSTED BUYING POWER
+        let costDeduction = 0;
+        if(app.data.marital === 'married') costDeduction += 400;
+        costDeduction += (app.data.kids * 300);
+
+        const adjustedIncome = Math.max(1000, app.data.income - costDeduction);
+
+        // Multiplier 90x monthly disposable income + Equity
+        app.data.currPower = Math.floor((adjustedIncome * 90) + app.data.equity);
+
+        // METRIC 2: READINESS (Quadratic)
+        const ratio = app.data.currPower / app.data.target;
+        let readiness = ratio >= 1.0 ? 100 : Math.max(0, Math.floor(100 * Math.pow(ratio, 2)));
+
+        // METRIC 3: EQUITY PROJECTION (Compound Interest)
+        const monthlyRate = (app.data.rate / 100) / 12;
+        const months = app.data.years * 12;
+        let futureEquity = app.data.equity;
+        for(let i=0; i<months; i++) {
+            futureEquity = (futureEquity * (1 + monthlyRate)) + app.data.savings;
+        }
+
+        // METRIC 4: LIKELIHOOD (Logistic)
+        const futurePower = (adjustedIncome * 90) + futureEquity;
+        const coverage = futurePower / app.data.target;
+        let likelihood = Math.max(10, Math.floor(100 / (1 + Math.exp(-10 * (coverage - 0.85)))));
+        if(futurePower >= app.data.target) likelihood = 98;
+
+        // UI UPDATES
+        const byId = (id)=>document.getElementById(id);
+        byId('out-readiness').innerText = readiness + "%";
+        byId('bar-readiness').style.width = readiness + "%";
+        byId('txt-power').innerText = app.fmt(app.data.currPower);
+        byId('cta-power').innerText = app.fmt(app.data.currPower);
+
+        byId('out-likelihood').innerText = likelihood + "%";
+        byId('bar-likelihood').style.width = likelihood + "%";
+        byId('txt-year').innerText = app.data.years;
+        byId('disp-risk-name').innerText = app.data.riskName;
+
+        byId('out-final-equity').innerText = app.fmt(futureEquity);
+
+        // Update Chat Context Text
+        const familyText = app.data.marital === 'married' ? `married with ${app.data.kids} kids` : `single with ${app.data.kids} kids`;
+        byId('chat-status-text').innerText = familyText;
+        byId('chat-risk-text').innerText = app.data.riskName;
+
+        // Family Label
+        byId('disp-family').innerText = app.data.marital === 'married' ? 'Family' : 'Household';
+
+        app.updateChart && app.updateChart(monthlyRate);
+        app.nav && app.nav('plan');
+    };
+})();
+</script>
