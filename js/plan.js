@@ -110,6 +110,11 @@
         // Update mid panel to reflect current numbers (projected equity aligns with chart's final value)
         const finalProjected = dataCompound[dataCompound.length - 1] ?? app.data.equity;
         app.updateKeyFigures(finalProjected);
+
+        // Generate initial AI advice after chart is ready
+        if (app.generateFirstAIText) {
+            app.generateFirstAIText();
+        }
     };
 
     app.sendChat = async function(){
@@ -155,7 +160,7 @@
                 
                 User Question: "${msg}"
                 
-                Instructions: Answer concisely (max 2-3 sentences). Be realistic about family costs and risk.
+                Instructions: Answer in English. Answer concisely (max 2-3 sentences). Be realistic about family costs and risk.
             `;
 
             const response = await app.callGemini(prompt);
@@ -177,13 +182,85 @@
         history.scrollTop = history.scrollHeight;
     };
 
-    app.callGemini = async function(promptText){
+
+        ///// First API call to Gemini - generate initial advice based on user profile
+
+    app.hasGeneratedFirstAdvice = false;
+
+    app.generateFirstAIText = async function(){
+        if (app.hasGeneratedFirstAdvice) return;
+
+        const history = document.getElementById('chat-history');
+        if (!history) return;
+
+        app.hasGeneratedFirstAdvice = true;
+
+        // Loading Bubble
+        const loadId = 'l-init-' + Date.now();
+        history.innerHTML += `
+                <div class="flex items-start chat-bubble" id="${loadId}">
+                    <div class="w-8 h-8 rounded-full bg-interhyp-blue flex items-center justify-center text-white text-xs mr-2"><i class="fa-solid fa-robot"></i></div>
+                    <div class="bg-white rounded-2xl rounded-tl-none p-3 text-sm text-slate-700 shadow-sm border border-slate-200 flex items-center">
+                        <div class="loader" style="width:14px; height:14px; border-width:2px;"></div><span class="ml-2">Analyzing profile...</span>
+                    </div>
+                </div>
+            `;
+        history.scrollTop = history.scrollHeight;
+
+        try {
+            const prompt = `
+                Act as an Interhyp financial advisor.
+                User Profile:
+                - Income: €${app.data.income}
+                - Savings: €${app.data.equity} (Current), €${app.data.savings}/mo
+                - Family: ${app.data.marital}, ${app.data.kids} children.
+                - Risk Profile: ${app.data.riskName} (${app.data.rate}% APY).
+                - Goal: €${app.data.target} home in ${app.data.years} years.
+                - Current Buying Power: €${app.data.currPower}.
+
+                Instruction: Answer in English. Begin the response with 'Here are some steps you can take to increase your
+                purchasing power: '. Only display 3 concise financial steps the user can take to increase his buying power and his equity as 
+                fast as possible based on his current situation, taking into account the provided values. Provide these 3
+                 steps in a list format with each step beginning with 1. or 2. or 3. . Do not include any prelude or
+                  introduction or conclusion. I only need the steps themselves. Keep each step as concise as possible, don't use any filler words or phrases.
+            `;
+
+            const response = await app.callGemini(prompt);
+
+            const formattedResponse = response
+                .replace(/1\./g, '<br>1.')
+                .replace(/2\./g, '<br>2.')
+                .replace(/3\./g, '<br>3.');
+
+            const loadEl = document.getElementById(loadId);
+            if (loadEl) loadEl.remove();
+
+            history.innerHTML += `
+                    <div class="flex items-start chat-bubble">
+                        <div class="w-8 h-8 rounded-full bg-interhyp-blue flex items-center justify-center text-white text-xs mr-2 flex-shrink-0"><i class="fa-solid fa-robot"></i></div>
+                        <div class="bg-white rounded-2xl rounded-tl-none p-3 text-sm text-slate-700 shadow-sm border border-slate-200">
+                            ${formattedResponse}
+                        </div>
+                    </div>
+                `;
+        } catch (e) {
+            const loadEl = document.getElementById(loadId);
+            if (loadEl) loadEl.remove();
+        }
+        history.scrollTop = history.scrollHeight;
+    };
+
+
+        ///End of first API call to Gemini - generate initial advice based on user profile
+
+
+        app.callGemini = async function(promptText){
         const apiKey = "AIzaSyDhbrk45o9aTFMqjtiWiqP3or3N3sUI5go"; // System handles key
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({contents: [{parts: [{text: promptText}]}]})
         });
         const data = await response.json();
         return data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No response.';
