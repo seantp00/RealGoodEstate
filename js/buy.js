@@ -62,7 +62,7 @@
                     <div class="h-48 bg-slate-100 relative overflow-hidden">
                         <img src="${img}" alt="${(item.title || 'Property listing').replace(/"/g, '&quot;')}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/E6F2FA/005EA8?text=No+Image'">
                         <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-3">
-                            <span class="text-white font-bold">${item.buyingPrice === 0 ? 'no price listed' : app.fmt(item.buyingPrice)}</span>
+                            <span class="text-white font-bold">${item.buyingPrice === null ? 'Price on Request' : app.fmt(item.buyingPrice)}</span>
                         </div>
                     </div>
                     <div class="p-4">
