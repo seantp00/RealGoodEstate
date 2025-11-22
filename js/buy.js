@@ -13,6 +13,15 @@
         const effectiveBudget = (app.data.useBudgetOverrideOnce && typeof app.data.buyBudgetOverride === 'number' && app.data.buyBudgetOverride > 0)
             ? app.data.buyBudgetOverride
             : app.data.currPower;
+
+        // Sync effective budget to filter UI if not set (default value)
+        setupFilterUI();
+        const maxPriceInput = document.getElementById('filter-max-price');
+        if (maxPriceInput && !maxPriceInput.value) {
+            maxPriceInput.value = effectiveBudget;
+            updateActiveSummary();
+        }
+
         // Immediately clear one-time override after capturing to avoid races with rapid navigation
         if (app.data.useBudgetOverrideOnce) {
             app.data.useBudgetOverrideOnce = false;
@@ -25,11 +34,11 @@
 
         const payload = {
             "active": true,
-            "type": "APPARTMENTBUY",
+            "type": "APARTMENTBUY" | "HOUSEBUY",
             "sortBy": "asc",
             "sortKey": "buyingPrice",
-            "from": 0,
-            "size": 100,
+            "from": 1,
+            "size": 10000,
             "geoSearches": { "geoSearchQuery": app.data.location, "geoSearchType": "city" }
         };
         try {
