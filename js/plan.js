@@ -23,8 +23,15 @@
             dataCash.push(tempCash);
         }
 
-        const downpaymentGoal = app.data.target * 0.20;
+        const downpaymentGoal = app.data.target * 0.20; // 20% downpayment ->
         const targetLine = new Array(app.data.years + 1).fill(downpaymentGoal);
+
+        const allValues = dataCompound.concat(dataCash, targetLine).map(v => Number(v) || 0);
+        const maxVal = Math.max(...allValues, 0);
+        const minVal = Math.min(...allValues, maxVal * 0.95);
+        const suggestedMax = Math.ceil(maxVal * 1.08); // 8% headroom
+        const suggestedMin = Math.floor(minVal * 0.92);
+
 
         app.chart = new Chart(ctx, {
             type: 'line',
@@ -47,7 +54,7 @@
                         fill: false
                     },
                     {
-                        label: '20% Downpayment',
+                        label: `20% Downpayment - (${app.fmt(downpaymentGoal)})`,
                         data: targetLine,
                         borderColor: '#F59E0B',
                         borderDash: [2, 2],
@@ -58,6 +65,17 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        suggestedMin: suggestedMin,
+                        suggestedMax: suggestedMax,
+                        ticks: {
+                            callback: value => app.fmt(value)
+                        }
+                    }
+                },
+
                 plugins: { legend: { position: 'bottom' } }
             }
         });
