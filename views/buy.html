@@ -12,6 +12,117 @@
         </button>
     </div>
 
+    <!-- Filters: open panel button -->
+    <div class="mb-6 flex items-center">
+        <button id="btn-open-filters" class="bg-white border border-slate-200 text-interhyp-blue px-3 py-1 rounded text-sm flex items-center gap-2">
+            <i class="fa-solid fa-filter"></i> Filters
+        </button>
+        <div id="active-filter-summary" class="text-sm text-slate-500 ml-4">No filters selected</div>
+    </div>
+
+    <!-- Slide-over filter panel -->
+    <div id="filter-panel" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/40" id="filter-panel-backdrop"></div>
+        <aside class="absolute right-0 top-0 h-full w-full md:w-96 bg-white shadow-xl p-6 overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-lg">Filters & Sorting</h3>
+                <button id="btn-close-filters" class="text-slate-500 hover:text-slate-800">Close</button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Price (€)</label>
+                    <div class="flex gap-2">
+                        <input id="filter-min-price" type="number" placeholder="Min" class="w-1/2 px-2 py-1 border rounded" />
+                        <input id="filter-max-price" type="number" placeholder="Max" class="w-1/2 px-2 py-1 border rounded" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Rooms</label>
+                    <div class="flex gap-2">
+                        <input id="filter-min-rooms" type="number" placeholder="Min" class="w-1/2 px-2 py-1 border rounded" />
+                        <input id="filter-max-rooms" type="number" placeholder="Max" class="w-1/2 px-2 py-1 border rounded" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Square Meters (m²)</label>
+                    <div class="flex gap-2">
+                        <input id="filter-min-sqm" type="number" placeholder="Min" class="w-1/2 px-2 py-1 border rounded" />
+                        <input id="filter-max-sqm" type="number" placeholder="Max" class="w-1/2 px-2 py-1 border rounded" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Price / m² (€)</label>
+                    <div class="flex gap-2">
+                        <input id="filter-min-ppsqm" type="number" placeholder="Min" class="w-1/2 px-2 py-1 border rounded" />
+                        <input id="filter-max-ppsqm" type="number" placeholder="Max" class="w-1/2 px-2 py-1 border rounded" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Construction Year</label>
+                    <div class="flex gap-2">
+                        <input id="filter-min-year" type="number" placeholder="From" class="w-1/2 px-2 py-1 border rounded" />
+                        <input id="filter-max-year" type="number" placeholder="To" class="w-1/2 px-2 py-1 border rounded" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Publish Date</label>
+                    <div class="flex gap-2">
+                        <input id="filter-published-from" type="date" class="w-1/2 px-2 py-1 border rounded" />
+                        <input id="filter-published-to" type="date" class="w-1/2 px-2 py-1 border rounded" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Last Updated</label>
+                    <div class="flex gap-2">
+                        <input id="filter-updated-from" type="date" class="w-1/2 px-2 py-1 border rounded" />
+                        <input id="filter-updated-to" type="date" class="w-1/2 px-2 py-1 border rounded" />
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <label class="text-sm font-medium">Only Listed Price</label>
+                    <input id="filter-price-listed" type="checkbox" />
+                </div>
+
+                <hr />
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Sort By</label>
+                    <div class="flex gap-2">
+                        <select id="filter-sort-key" class="flex-1 px-2 py-1 border rounded">
+                            <option value="buyingPrice">Price</option>
+                            <option value="rooms">Rooms</option>
+                            <option value="squareMeter">Square Meters</option>
+                            <option value="pricePerSqm">Price / m²</option>
+                            <option value="constructionYear">Construction Year</option>
+                            <option value="publishDate">Publish Date</option>
+                            <option value="updatedAt">Last Updated</option>
+                        </select>
+                        <select id="filter-sort-order" class="w-28 px-2 py-1 border rounded">
+                            <option value="asc">Asc</option>
+                            <option value="desc">Desc</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between mt-4">
+                    <div>
+                        <button id="btn-clear-panel" class="bg-white border border-slate-200 px-3 py-1 rounded mr-2">Clear</button>
+                        <button id="btn-apply-panel" class="bg-interhyp-blue text-white px-3 py-1 rounded">Apply</button>
+                    </div>
+                    <div class="text-sm text-slate-500"></div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
     <div id="listings-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
     <div id="listings-msg" class="hidden text-center py-12 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-300"></div>
 </section>
