@@ -34,7 +34,7 @@
             if (!res.ok) throw new Error('API Error');
             const data = await res.json();
             const allListings = data.results || [];
-            const matches = allListings.filter(l => l.buyingPrice <= app.data.currPower && l.buyingPrice > 0);
+            const matches = allListings.filter(l => l.buyingPrice <= app.data.currPower && l.buyingPrice >= 0);
             app.renderListings(matches);
         } catch (e) {
             grid.innerHTML = '';
@@ -55,7 +55,7 @@
             return;
         }
 
-        items.slice(0, 8).forEach(item => {
+        items.forEach(item => {
             const img = (item.images && item.images.length > 0) ? item.images[0].originalUrl : 'https://placehold.co/600x400/E6F2FA/005EA8?text=Listing';
             grid.innerHTML += `
                 <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all group">
