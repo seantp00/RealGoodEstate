@@ -3,8 +3,20 @@
 
     // Track whether defaults have been applied to avoid reapplying after clear
     let _defaultsApplied = false;
+    
+    // Pagination state
+    let _currentPage = 0;
+    let _pageSize = 200;
+    let _allListings = [];
+    let _hasMoreData = true;
+    let _isLoading = false;
 
-    app.fetchListings = async function(){
+    app.fetchListings = async function(reset = true){
+        if (reset) {
+            _currentPage = 0;
+            _allListings = [];
+            _hasMoreData = true;
+        }
         const grid = document.getElementById('listings-grid');
         const msg = document.getElementById('listings-msg');
         if (!grid || !msg) return;
@@ -63,18 +75,31 @@
         }
         if (budEl) budEl.innerText = app.fmt(effectiveBudget);
 
-        grid.innerHTML = '<div class="col-span-full h-64 flex flex-col items-center justify-center text-slate-400"><div class="loader mb-4"></div><p>Scanning Market via ThinkImmo...</p></div>';
-        msg.classList.add('hidden');
+        if (reset) {
+            grid.innerHTML = '<div class="col-span-full h-64 flex flex-col items-center justify-center text-slate-400"><div class="loader mb-4"></div><p>Scanning Market via ThinkImmo...</p></div>';
+            msg.classList.add('hidden');
+        }
+
+        await loadMoreListings(effectiveBudget);
+    };
+
+    async function loadMoreListings(effectiveBudget) {
+        if (_isLoading || !_hasMoreData) return;
+        
+        _isLoading = true;
+        const grid = document.getElementById('listings-grid');
+        const msg = document.getElementById('listings-msg');
 
         const payload = {
             "active": true,
             "type": "APARTMENTBUY" | "HOUSEBUY",
             "sortBy": "asc",
             "sortKey": "buyingPrice",
-            "from": 1,
-            "size": 4000,
+            "from": _currentPage * _pageSize + 1,
+            "size": _pageSize,
             "geoSearches": { "geoSearchQuery": app.data.location, "geoSearchType": "city" }
         };
+        
         try {
             const res = await fetch('https://thinkimmo-api.mgraetz.de/thinkimmo', {
                 method: 'POST',
@@ -84,20 +109,61 @@
 
             if (!res.ok) throw new Error('API Error');
             const data = await res.json();
-            const allListings = data.results || [];
-            const matches = allListings.filter(l =>  l.buyingPrice >= 0);
-            console.log('[buy.js] Matches found (pre-filter):', matches.length);
+            const newListings = data.results || [];
+            
+            if (newListings.length < _pageSize) {
+                _hasMoreData = false;
+            }
+            
+            _allListings = _allListings.concat(newListings);
+            _currentPage++;
+            
+            const matches = _allListings.filter(l => l.buyingPrice >= 0);
+            console.log('[buy.js] Total matches loaded:', matches.length);
             const filters = getActiveFilters();
             const filtered = applyFilters(matches, filters);
-            console.log('[buy.js] Matches after UI filters:', filtered.length, filters);
+            console.log('[buy.js] Matches after UI filters:', filtered.length);
             app.renderListings(filtered, effectiveBudget);
+            
+            _isLoading = false;
         } catch (e) {
             console.error('[buy.js] Error:', e);
-            grid.innerHTML = '';
-            msg.innerHTML = `Connection Error or No Data.`;
-            msg.classList.remove('hidden');
+            if (_currentPage === 0) {
+                grid.innerHTML = '';
+                msg.innerHTML = `Connection Error or No Data.`;
+                msg.classList.remove('hidden');
+            }
+            _isLoading = false;
         }
-    };
+    }
+
+    // Setup infinite scroll
+    function setupInfiniteScroll() {
+        let scrollTimeout;
+        window.addEventListener('scroll', function() {
+            if (scrollTimeout) clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(function() {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const windowHeight = window.innerHeight;
+                const documentHeight = document.documentElement.scrollHeight;
+                
+                // Load more when user is within 500px of bottom
+                if (scrollTop + windowHeight >= documentHeight - 500) {
+                    const budEl = document.getElementById('api-budget');
+                    const effectiveBudget = (app.data.useBudgetOverrideOnce && typeof app.data.buyBudgetOverride === 'number' && app.data.buyBudgetOverride > 0)
+                        ? app.data.buyBudgetOverride
+                        : app.data.currPower;
+                    loadMoreListings(effectiveBudget);
+                }
+            }, 100);
+        });
+    }
+
+    // Initialize infinite scroll once
+    if (!window._buyInfiniteScrollSetup) {
+        setupInfiniteScroll();
+        window._buyInfiniteScrollSetup = true;
+    }
 
     // Filter UI setup flag
     let _filterUISetup = false;
