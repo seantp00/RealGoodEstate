@@ -343,7 +343,7 @@
     };
 
 
-    ///// First API call to Gemini - generate initial advice based on user profile
+        ///// First API call to Gemini - generate initial advice based on user profile
 
     app.hasGeneratedFirstAdvice = false;
 
@@ -411,10 +411,10 @@
     };
 
 
-    ///End of first API call to Gemini - generate initial advice based on user profile
+        ///End of first API call to Gemini - generate initial advice based on user profile
 
 
-    app.callGemini = async function(promptText){
+        app.callGemini = async function(promptText){
         const apiKey = "AIzaSyDhbrk45o9aTFMqjtiWiqP3or3N3sUI5go"; // System handles key
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
         const response = await fetch(url, {
