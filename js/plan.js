@@ -1,5 +1,6 @@
 (function(){
     const app = window.app;
+    const SLIDER_MAX = 30;
 
     // Calculate required monthly savings to reach down payment goal
     app.calculateRequiredSavings = function(downPaymentGoal, currentEquity, years, monthlyRate) {
@@ -133,6 +134,7 @@
 
     // Generate projection data for a given number of years
     app.generateProjectionData = function(years, monthlyRate) {
+        years = Math.max(1, Math.min(years, SLIDER_MAX));
         const yearsArr = Array.from({length: years + 1}, (_, i) => `Year ${i}`);
         const dataCompound = [app.data.equity];
         const dataCash = [app.data.equity];
@@ -186,6 +188,7 @@
 
     // Redraw chart with a specific number of years
     app.redrawChartWithYears = function(years, monthlyRate) {
+        years = Math.max(1, Math.min(Number(years) || 1, SLIDER_MAX));
         console.log('[Redraw Chart] Starting redraw with years:', years, 'rate:', monthlyRate);
         const canvas = document.getElementById('projectionChart');
         if (!canvas) {
@@ -434,6 +437,7 @@
         console.log('[Slider Init] sliderEl found:', !!sliderEl, 'sliderLabelEl found:', !!sliderLabelEl);
 
         if (sliderEl && sliderLabelEl) {
+            sliderEl.max = SLIDER_MAX;
             // Remove any existing listeners to avoid duplicates
             if (app.sliderInputHandler) {
                 sliderEl.removeEventListener('input', app.sliderInputHandler);
@@ -441,10 +445,15 @@
 
             // Define the input handler
             app.sliderInputHandler = function() {
-                const years = parseInt(this.value, 10);
+                let years = parseInt(this.value, 10);
+                years = Math.max(1, Math.min(years, SLIDER_MAX));
                 console.log('[Slider Event] Slider moved to year:', years);
                 sliderLabelEl.textContent = `Projection: Year ${years}`;
 
+                // keep slider UI in sync if it was clamped
+                if (Number(this.value) !== years) {
+                    this.value = years;
+                }
                 // Redraw chart with new year range
                 if (app.chartMonthlyRate !== undefined) {
                     console.log('[Slider Event] Redrawing chart for year:', years, 'with rate:', app.chartMonthlyRate);
@@ -474,7 +483,10 @@
         const sliderEl = document.getElementById('chart-year-slider');
         const sliderLabelEl = document.getElementById('chart-slider-label');
         if (sliderEl) {
-            sliderEl.value = app.data.years || 1;
+            sliderEl.max = SLIDER_MAX;
+            const initialYears = Math.max(1, Math.min(app.data.years || 1, SLIDER_MAX));
+            sliderEl.value = initialYears;
+            if (sliderLabelEl) sliderLabelEl.textContent = `Projection: Year ${initialYears}`;
             console.log('[UpdateChart] Slider value set to:', sliderEl.value);
         } else {
             console.warn('[UpdateChart] Slider element not found!');
