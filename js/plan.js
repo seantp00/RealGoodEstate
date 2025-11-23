@@ -131,20 +131,16 @@
         }
     }
 
-    app.updateChart = function(monthlyRate){
-        const canvas = document.getElementById('projectionChart');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if(app.chart) app.chart.destroy();
-
-        const yearsArr = Array.from({length: app.data.years + 1}, (_, i) => `Year ${i}`);
+    // Generate projection data for a given number of years
+    app.generateProjectionData = function(years, monthlyRate) {
+        const yearsArr = Array.from({length: years + 1}, (_, i) => `Year ${i}`);
         const dataCompound = [app.data.equity];
         const dataCash = [app.data.equity];
 
         let tempCompound = app.data.equity;
         let tempCash = app.data.equity;
 
-        for(let y=1; y<=app.data.years; y++) {
+        for(let y=1; y<=years; y++) {
             for(let m=0; m<12; m++) {
                 tempCompound = (tempCompound * (1 + monthlyRate)) + app.data.savings;
                 tempCash += app.data.savings;
@@ -153,38 +149,60 @@
             dataCash.push(tempCash);
         }
 
-        const downpaymentGoal = app.data.target * 0.20; // 20% downpayment ->
-        const targetLine = new Array(app.data.years + 1).fill(downpaymentGoal);
+        const downpaymentGoal = app.data.target * 0.20;
+        const targetLine = new Array(years + 1).fill(downpaymentGoal);
 
-        // Calculate required savings rate projections
-        const requiredSavings = app.calculateRequiredSavings(downpaymentGoal, app.data.equity, app.data.years, monthlyRate);
+        const requiredSavings = app.calculateRequiredSavings(downpaymentGoal, app.data.equity, years, monthlyRate);
 
-        // Project what happens with required savings rate (invested)
         const dataRequiredInvested = [app.data.equity];
         let tempRequiredInvested = app.data.equity;
-        for(let y=1; y<=app.data.years; y++) {
+        for(let y=1; y<=years; y++) {
             for(let m=0; m<12; m++) {
                 tempRequiredInvested = (tempRequiredInvested * (1 + monthlyRate)) + requiredSavings.requiredInvested;
             }
             dataRequiredInvested.push(tempRequiredInvested);
         }
 
-        // Project what happens with required savings rate (cash)
         const dataRequiredCash = [app.data.equity];
         let tempRequiredCash = app.data.equity;
-        for(let y=1; y<=app.data.years; y++) {
+        for(let y=1; y<=years; y++) {
             for(let m=0; m<12; m++) {
                 tempRequiredCash += requiredSavings.requiredCash;
             }
             dataRequiredCash.push(tempRequiredCash);
         }
 
+        return {
+            yearsArr,
+            dataCompound,
+            dataCash,
+            dataRequiredInvested,
+            dataRequiredCash,
+            targetLine,
+            downpaymentGoal,
+            requiredSavings
+        };
+    };
+
+    // Redraw chart with a specific number of years
+    app.redrawChartWithYears = function(years, monthlyRate) {
+        console.log('[Redraw Chart] Starting redraw with years:', years, 'rate:', monthlyRate);
+        const canvas = document.getElementById('projectionChart');
+        if (!canvas) {
+            console.warn('[Redraw Chart] Canvas element not found!');
+            return;
+        }
+        const ctx = canvas.getContext('2d');
+        if(app.chart) app.chart.destroy();
+
+        const projData = app.generateProjectionData(years, monthlyRate);
+        const { yearsArr, dataCompound, dataCash, dataRequiredInvested, dataRequiredCash, targetLine, downpaymentGoal, requiredSavings } = projData;
+
         const allValues = dataCompound.concat(dataCash, targetLine, dataRequiredInvested, dataRequiredCash).map(v => Number(v) || 0);
         const maxVal = Math.max(...allValues, 0);
         const minVal = Math.min(...allValues, maxVal * 0.95);
-        const suggestedMax = Math.ceil(maxVal * 1.04); // 8% headroom
+        const suggestedMax = Math.ceil(maxVal * 1.04);
         const suggestedMin = Math.floor(minVal * 0.92);
-
 
         app.chart = new Chart(ctx, {
             type: 'line',
@@ -250,19 +268,13 @@
                         }
                     }
                 },
-
                 plugins: { legend: { position: 'bottom' } }
             }
         });
 
-        // Update mid panel to reflect current numbers (projected equity aligns with chart's final value)
         const finalProjected = dataCompound[dataCompound.length - 1] ?? app.data.equity;
         app.updateKeyFigures(finalProjected, monthlyRate);
-
-        // Generate initial AI advice after chart is ready
-        if (app.generateFirstAIText) {
-            app.generateFirstAIText();
-        }
+        console.log('[Redraw Chart] Chart redrawn successfully');
     };
 
     app.sendChat = async function(){
@@ -413,4 +425,73 @@
         const data = await response.json();
         return data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No response.';
     };
+
+    // Initialize slider functionality - attach immediately and on DOM changes
+    app.initChartSlider = function() {
+        const sliderEl = document.getElementById('chart-year-slider');
+        const sliderLabelEl = document.getElementById('chart-slider-label');
+
+        console.log('[Slider Init] sliderEl found:', !!sliderEl, 'sliderLabelEl found:', !!sliderLabelEl);
+
+        if (sliderEl && sliderLabelEl) {
+            // Remove any existing listeners to avoid duplicates
+            if (app.sliderInputHandler) {
+                sliderEl.removeEventListener('input', app.sliderInputHandler);
+            }
+
+            // Define the input handler
+            app.sliderInputHandler = function() {
+                const years = parseInt(this.value, 10);
+                console.log('[Slider Event] Slider moved to year:', years);
+                sliderLabelEl.textContent = `Projection: Year ${years}`;
+
+                // Redraw chart with new year range
+                if (app.chartMonthlyRate !== undefined) {
+                    console.log('[Slider Event] Redrawing chart for year:', years, 'with rate:', app.chartMonthlyRate);
+                    app.redrawChartWithYears(years, app.chartMonthlyRate);
+                } else {
+                    console.warn('[Slider Event] chartMonthlyRate is undefined!');
+                }
+            };
+
+            // Attach the listener
+            sliderEl.addEventListener('input', app.sliderInputHandler);
+            console.log('[Slider Init] Event listener attached successfully');
+        } else {
+            console.warn('[Slider Init] Could not find slider elements');
+        }
+    };
+
+    // Store the original updateChart before we override it
+    const originalUpdateChartFunction = app.updateChart;
+
+    // Override updateChart to initialize slider after rendering
+    app.updateChart = function(monthlyRate) {
+        console.log('[UpdateChart] Called with monthlyRate:', monthlyRate, 'app.data.years:', app.data.years);
+        app.chartMonthlyRate = monthlyRate;
+
+        // Initialize slider to default years
+        const sliderEl = document.getElementById('chart-year-slider');
+        if (sliderEl) {
+            sliderEl.value = app.data.years || 1;
+            console.log('[UpdateChart] Slider value set to:', sliderEl.value);
+        } else {
+            console.warn('[UpdateChart] Slider element not found!');
+        }
+
+        app.redrawChartWithYears(app.data.years, monthlyRate);
+
+        // Generate initial AI advice after chart is ready
+        if (app.generateFirstAIText) {
+            app.generateFirstAIText();
+        }
+
+        // Initialize slider event listener after chart is rendered
+        app.initChartSlider();
+    };
+
+    // Try to initialize on DOMContentLoaded as a fallback
+    document.addEventListener('DOMContentLoaded', function() {
+        app.initChartSlider();
+    });
 })();

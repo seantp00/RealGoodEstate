@@ -96,6 +96,26 @@
             <div class="h-[350px] w-full">
                 <canvas id="projectionChart"></canvas>
             </div>
+            <!-- Timeline Slider -->
+            <div class="mt-6 space-y-2">
+                <div class="flex justify-between items-center">
+                    <label for="chart-year-slider" class="text-sm font-semibold text-slate-700">Adjust Timeline</label>
+                    <span id="chart-slider-label" class="text-sm font-bold text-interhyp-blue">Projection: Year 0</span>
+                </div>
+                <input
+                    type="range"
+                    id="chart-year-slider"
+                    min="1"
+                    max="50"
+                    value="1"
+                    class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-interhyp-blue"
+                    style="outline: none;"
+                >
+                <div class="flex justify-between text-xs text-slate-500">
+                    <span>Year 1</span>
+                    <span>Year 50</span>
+                </div>
+            </div>
         </div>
 
         <!-- AI Chat Assistant (RESTORED) -->
