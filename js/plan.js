@@ -1,5 +1,6 @@
 (function(){
     const app = window.app;
+    const SLIDER_MAX = 30;
 
     // Calculate required monthly savings to reach down payment goal
     app.calculateRequiredSavings = function(downPaymentGoal, currentEquity, years, monthlyRate) {
@@ -133,6 +134,7 @@
 
     // Generate projection data for a given number of years
     app.generateProjectionData = function(years, monthlyRate) {
+        years = Math.max(1, Math.min(years, SLIDER_MAX));
         const yearsArr = Array.from({length: years + 1}, (_, i) => `Year ${i}`);
         const dataCompound = [app.data.equity];
         const dataCash = [app.data.equity];
@@ -186,6 +188,7 @@
 
     // Redraw chart with a specific number of years
     app.redrawChartWithYears = function(years, monthlyRate) {
+        years = Math.max(1, Math.min(Number(years) || 1, SLIDER_MAX));
         console.log('[Redraw Chart] Starting redraw with years:', years, 'rate:', monthlyRate);
         const canvas = document.getElementById('projectionChart');
         if (!canvas) {
@@ -203,6 +206,35 @@
         const minVal = Math.min(...allValues, maxVal * 0.95);
         const suggestedMax = Math.ceil(maxVal * 1.04);
         const suggestedMin = Math.floor(minVal * 0.92);
+
+        // Custom plugin to draw a vertical line at the original input year
+        const inputYear = app.data.years;
+        const highlightPlugin = {
+            id: 'highlightInputYear',
+            afterDraw: (chart) => {
+                if (typeof inputYear !== 'number' || inputYear < 0) return;
+                const xAxis = chart.scales['x'];
+                if (!xAxis) return;
+                // Find the pixel for the input year
+                const yearIndex = inputYear;
+                if (yearIndex < 0 || yearIndex > years) return; // Only draw if in range
+                const x = xAxis.getPixelForValue(yearIndex);
+                const topY = chart.scales['y'].top;
+                const bottomY = chart.scales['y'].bottom;
+                const ctx = chart.ctx;
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(x, topY);
+                ctx.lineTo(x, bottomY);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#005EA8'; // Interhyp blue
+                ctx.setLineDash([4, 4]);
+                ctx.globalAlpha = 0.8;
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.restore();
+            }
+        };
 
         app.chart = new Chart(ctx, {
             type: 'line',
@@ -269,7 +301,8 @@
                     }
                 },
                 plugins: { legend: { position: 'bottom' } }
-            }
+            },
+            plugins: [highlightPlugin]
         });
 
         const finalProjected = dataCompound[dataCompound.length - 1] ?? app.data.equity;
@@ -343,7 +376,7 @@
     };
 
 
-        ///// First API call to Gemini - generate initial advice based on user profile
+    ///// First API call to Gemini - generate initial advice based on user profile
 
     app.hasGeneratedFirstAdvice = false;
 
@@ -411,10 +444,10 @@
     };
 
 
-        ///End of first API call to Gemini - generate initial advice based on user profile
+    ///End of first API call to Gemini - generate initial advice based on user profile
 
 
-        app.callGemini = async function(promptText){
+    app.callGemini = async function(promptText){
         const apiKey = "AIzaSyDhbrk45o9aTFMqjtiWiqP3or3N3sUI5go"; // System handles key
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
         const response = await fetch(url, {
@@ -434,6 +467,7 @@
         console.log('[Slider Init] sliderEl found:', !!sliderEl, 'sliderLabelEl found:', !!sliderLabelEl);
 
         if (sliderEl && sliderLabelEl) {
+            sliderEl.max = SLIDER_MAX;
             // Remove any existing listeners to avoid duplicates
             if (app.sliderInputHandler) {
                 sliderEl.removeEventListener('input', app.sliderInputHandler);
@@ -441,10 +475,15 @@
 
             // Define the input handler
             app.sliderInputHandler = function() {
-                const years = parseInt(this.value, 10);
+                let years = parseInt(this.value, 10);
+                years = Math.max(1, Math.min(years, SLIDER_MAX));
                 console.log('[Slider Event] Slider moved to year:', years);
                 sliderLabelEl.textContent = `Projection: Year ${years}`;
 
+                // keep slider UI in sync if it was clamped
+                if (Number(this.value) !== years) {
+                    this.value = years;
+                }
                 // Redraw chart with new year range
                 if (app.chartMonthlyRate !== undefined) {
                     console.log('[Slider Event] Redrawing chart for year:', years, 'with rate:', app.chartMonthlyRate);
@@ -474,7 +513,10 @@
         const sliderEl = document.getElementById('chart-year-slider');
         const sliderLabelEl = document.getElementById('chart-slider-label');
         if (sliderEl) {
-            sliderEl.value = app.data.years || 1;
+            sliderEl.max = SLIDER_MAX;
+            const initialYears = Math.max(1, Math.min(app.data.years || 1, SLIDER_MAX));
+            sliderEl.value = initialYears;
+            if (sliderLabelEl) sliderLabelEl.textContent = `Projection: Year ${initialYears}`;
             console.log('[UpdateChart] Slider value set to:', sliderEl.value);
         } else {
             console.warn('[UpdateChart] Slider element not found!');
