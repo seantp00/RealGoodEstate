@@ -472,11 +472,16 @@
 
         // Initialize slider to default years
         const sliderEl = document.getElementById('chart-year-slider');
+        const sliderLabelEl = document.getElementById('chart-slider-label');
         if (sliderEl) {
             sliderEl.value = app.data.years || 1;
             console.log('[UpdateChart] Slider value set to:', sliderEl.value);
         } else {
             console.warn('[UpdateChart] Slider element not found!');
+        }
+        // Ensure the label matches the slider value on first render
+        if (sliderLabelEl && sliderEl) {
+            sliderLabelEl.textContent = `Projection: Year ${sliderEl.value}`;
         }
 
         app.redrawChartWithYears(app.data.years, monthlyRate);
