@@ -72,7 +72,7 @@
             "sortBy": "asc",
             "sortKey": "buyingPrice",
             "from": 1,
-            "size": 400,
+            "size": 4000,
             "geoSearches": { "geoSearchQuery": app.data.location, "geoSearchType": "city" }
         };
         try {
@@ -199,10 +199,7 @@
         return isNaN(d.getTime()) ? null : d;
     }
 
-
     // Calculate recommendation score (0-100) based on similarity to desired property
-    // New behavior: construction year is weighed less; we reward "good" deviations
-    // (more sqm, lower price) and penalize "bad" deviations (less sqm, higher price).
     function calculateRecommendation(item) {
         let score = 0;
         let factors = 0;
@@ -213,73 +210,40 @@
         const desiredYear = app.data.yearBuilt;
         const desiredPrice = app.data.target;
 
-        // Weights (absolute maxima)
-        const WEIGHT_SQM = 30;      // reward more sqm, penalize less
-        const WEIGHT_ROOMS = 20;    // symmetric penalty for rooms mismatch
-        const WEIGHT_YEAR = 10;      // reduced importance for year
-        const WEIGHT_PRICE = 30;    // favor lower price, penalize higher price
-
-        // Factor 1: Square meters — reward if larger than desired, penalize if smaller
+        // Factor 1: Square meters similarity (weight: 25%)
         if (desiredSqm && item.squareMeter) {
-            const sqmRatio = Number(item.squareMeter) / Number(desiredSqm);
-            if (isFinite(sqmRatio)) {
-                if (sqmRatio >= 1) {
-                    // Good deviation: reward up to 50% more sqm, cap beyond that
-                    const cappedRatio = Math.min(sqmRatio, 1.5);
-                    score += ((cappedRatio - 1) / 0.5) * WEIGHT_SQM;
-                } else {
-                    // Bad deviation: penalize based on how much smaller
-                    score -= (1 - sqmRatio) * WEIGHT_SQM;
-                }
-                factors += WEIGHT_SQM;
-            }
+            const sqmDiff = Math.abs(item.squareMeter - desiredSqm) / desiredSqm;
+            score += Math.max(0, 25 - (sqmDiff * 25));
+            factors++;
         }
 
-        // Factor 2: Rooms — penalty for differences
-        if (desiredRooms && item.rooms !== undefined && item.rooms !== null) {
-            const roomsDiff = Math.abs(Number(item.rooms) - Number(desiredRooms));
-            const roomsPenalty = Math.min(WEIGHT_ROOMS, roomsDiff * 5);
-            score -= roomsPenalty;
-            factors += WEIGHT_ROOMS;
+        // Factor 2: Rooms similarity (weight: 20%)
+        if (desiredRooms && item.rooms) {
+            const roomsDiff = Math.abs(item.rooms - desiredRooms);
+            score += Math.max(0, 20 - (roomsDiff * 5));
+            factors++;
         }
 
-        // Factor 3: Year built — reduced weight, small penalty for distant year
+        // Factor 3: Year built similarity (weight: 15%)
         if (desiredYear) {
             const yearField = getFirstField(item, ['constructionYear', 'yearBuilt', 'builtYear']);
             if (yearField) {
-                const yearDiff = Math.abs(Number(yearField) - Number(desiredYear));
-                // Small impact: every 5 years ~1 point of penalty, capped
-                const yearPenalty = Math.min(WEIGHT_YEAR, yearDiff / 5);
-                score -= yearPenalty;
-                factors += WEIGHT_YEAR;
+                const yearDiff = Math.abs(yearField - desiredYear);
+                score += Math.max(0, 15 - (yearDiff / 10));
+                factors++;
             }
         }
 
-        // Factor 4: Price — reward lower prices but cap the reward to avoid favoring extremely cheap items
+        // Factor 4: Price fit to budget (weight: 40%)
         if (desiredPrice && item.buyingPrice) {
-            const priceRatio = Number(item.buyingPrice) / Number(desiredPrice);
-            if (isFinite(priceRatio)) {
-                if (priceRatio <= 1) {
-                    // Good: cheaper than target, but cap reward at 30% cheaper to avoid parking garages scoring 100%
-                    const cappedRatio = Math.max(priceRatio, 0.7);
-                    score += ((1 - cappedRatio) / 0.3) * WEIGHT_PRICE;
-                } else {
-                    // Bad: more expensive than target -> penalize proportional (max WEIGHT_PRICE)
-                    score -= Math.min(WEIGHT_PRICE, (priceRatio - 1) * WEIGHT_PRICE);
-                }
-                factors += WEIGHT_PRICE;
-            }
+            const priceDiff = Math.abs(item.buyingPrice - desiredPrice) / desiredPrice;
+            score += Math.max(0, 40 - (priceDiff * 40));
+            factors++;
         }
 
-        // If no factors present, return neutral
-        factors = 100;
-        
-        // At this point `score` is in range [-factors, +factors]. Map to [0,100].
-        const rawMin = -factors;
-        const rawMax = factors;
-        const normalized = ((score - rawMin) / (rawMax - rawMin)) * 100;
-        const clamped = Math.round(Math.max(0, Math.min(100, normalized)));
-        return clamped;
+        // Normalize if not all factors available
+        if (factors === 0) return 50; // Default neutral score
+        return Math.round(Math.min(100, score));
     }
 
     function getFirstField(item, keys) {
