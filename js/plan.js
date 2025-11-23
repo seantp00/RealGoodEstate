@@ -207,6 +207,35 @@
         const suggestedMax = Math.ceil(maxVal * 1.04);
         const suggestedMin = Math.floor(minVal * 0.92);
 
+        // Custom plugin to draw a vertical line at the original input year
+        const inputYear = app.data.years;
+        const highlightPlugin = {
+            id: 'highlightInputYear',
+            afterDraw: (chart) => {
+                if (typeof inputYear !== 'number' || inputYear < 0) return;
+                const xAxis = chart.scales['x'];
+                if (!xAxis) return;
+                // Find the pixel for the input year
+                const yearIndex = inputYear;
+                if (yearIndex < 0 || yearIndex > years) return; // Only draw if in range
+                const x = xAxis.getPixelForValue(yearIndex);
+                const topY = chart.scales['y'].top;
+                const bottomY = chart.scales['y'].bottom;
+                const ctx = chart.ctx;
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(x, topY);
+                ctx.lineTo(x, bottomY);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#005EA8'; // Interhyp blue
+                ctx.setLineDash([4, 4]);
+                ctx.globalAlpha = 0.8;
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.restore();
+            }
+        };
+
         app.chart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -272,7 +301,8 @@
                     }
                 },
                 plugins: { legend: { position: 'bottom' } }
-            }
+            },
+            plugins: [highlightPlugin]
         });
 
         const finalProjected = dataCompound[dataCompound.length - 1] ?? app.data.equity;
